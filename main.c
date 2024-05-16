@@ -16,6 +16,11 @@
 #define MIN_PADDING_X 2
 #define MIN_PADDING_Y 1
 
+typedef struct player {
+  int x_pos;
+  int y_pos;
+} player;
+
 typedef struct room_node {
   int x_pos;
   int y_pos;
@@ -36,14 +41,14 @@ typedef struct section_node {
 } snode;
 
 unsigned char *map[TOTAL_HEIGHT][TOTAL_WIDTH];
-unsigned char *wall = "█";
+unsigned char *wall = "#";
 unsigned char *ground = "_";
 unsigned char *test = "x";
 
 snode * add_snode(snode *head, int x, int y, int w, int h, char cdir, int cpos) {
   snode *tmp = NULL;
   if ((tmp = malloc(sizeof(snode))) == NULL) {
-    printf("malloc error ocurred");
+    printw("malloc error ocurred");
     (void)exit(EXIT_FAILURE);
   }
   tmp->x_pos = x;
@@ -78,11 +83,12 @@ void init_map() {
 }
 
 void draw_map() {
+  printw("Press x to exit, hjkl to navigate\n");
   for (int i = 0; i < TOTAL_HEIGHT; i++) {
     for (int j = 0; j < TOTAL_WIDTH; j++) {
-      printf("%s", map[i][j]);
+      printw("%s", map[i][j]);
     }
-    printf("\n");
+    printw("\n");
   }
 }
 
@@ -94,20 +100,20 @@ void create_rooms(snode *head) {
   int min_y = (MIN_ROOM_HEIGHT * 2) + (MIN_PADDING_Y * 4);
   if (direction == 0 && head->width > min_x) {
     split = MIN_ROOM_WIDTH + (MIN_PADDING_X * 2) + (rand() % (head->width - min_x)); 
-    //printf("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->x_pos, head->y_pos, head->width, head->height, direction, split);
+    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->x_pos, head->y_pos, head->width, head->height, direction, split);
     cpos = (rand() % (head->height - (MIN_PADDING_Y * 2))) + head->y_pos + MIN_PADDING_Y;
     create_rooms(add_snode(head, head->x_pos, head->y_pos, split, head->height, right, cpos));
     create_rooms(add_snode(head, head->x_pos + split, head->y_pos, head->width - split, head->height, left, cpos));
   } else if (direction == 1 && head->height > min_y) {
     split = MIN_ROOM_HEIGHT + (MIN_PADDING_Y * 2) + (rand() % (head->height - min_y)); 
-    //printf("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->x_pos, head->y_pos, head->width, head->height, direction, split);
+    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->x_pos, head->y_pos, head->width, head->height, direction, split);
     cpos = (rand() % (head->width - (MIN_PADDING_X * 2))) + head->x_pos + MIN_PADDING_X;
     create_rooms(add_snode(head, head->x_pos, head->y_pos, head->width, split, down, cpos));
     create_rooms(add_snode(head, head->x_pos, head->y_pos + split, head->width, head->height - split, up, cpos));
   } else {
     rnode *tmp = NULL;
     if ((tmp = malloc(sizeof(rnode))) == NULL) {
-      printf("malloc error ocurred");
+      printw("malloc error ocurred");
       (void)exit(EXIT_FAILURE);
     }
     tmp->x_pos = head->x_pos + MIN_PADDING_X;
@@ -118,9 +124,9 @@ void create_rooms(snode *head) {
   }
 }
 
-void print_rooms(snode *head) {
+void populate_matrix(snode *head) {
   if (head->room != NULL) {
-    //printf("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->room->x_pos, head->room->y_pos, head->room->width, head->room->height, head->corridor_direction, head->corridor_pos);
+    //printw("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->room->x_pos, head->room->y_pos, head->room->width, head->room->height, head->corridor_direction, head->corridor_pos);
     fill_tiles(head->room->x_pos, head->room->y_pos, head->room->width, head->room->height, ground);
     /*switch (head->corridor_direction) {
       case up: 
@@ -177,15 +183,15 @@ void print_rooms(snode *head) {
       break;
   }
 
-  printf("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->x_pos, head->y_pos, head->width, head->height, head->corridor_direction, head->corridor_pos);
-  printf("%c %d %d %d %d %s \n", head->corridor_direction, c_x, c_y, c_w, c_h, ground);
+  //printw("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->x_pos, head->y_pos, head->width, head->height, head->corridor_direction, head->corridor_pos);
+  //printw("%c %d %d %d %d %s \n", head->corridor_direction, c_x, c_y, c_w, c_h, ground);
   fill_tiles(c_x, c_y, c_w, c_h, ground);
 
   if (head->child1 != NULL) {
-    print_rooms(head->child1);
+    populate_matrix(head->child1);
   }
   if (head->child2 != NULL) {
-    print_rooms(head->child2);
+    populate_matrix(head->child2);
   }
 }
 
@@ -194,17 +200,31 @@ snode * create_map() {
   srand(time(NULL));
   snode *root = add_snode(NULL, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, 0, 0);
   create_rooms(root);
-  print_rooms(root);
-  printf("\n");
-  draw_map(); 
-  //refresh();
+  populate_matrix(root);
   return root;
+}
+
+player * create_player() {
+  player *tmp;
+  if ((tmp = malloc(sizeof(player))) == NULL) {
+    printw("malloc error ocurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  unsigned char tile;
+  return tmp;
 }
 
 int main() {
   initscr();
   snode *map = create_map();
-  getch();
+  player *p = create_player();
+  char in;
+  while (in != 'x') {
+    clear();
+    draw_map(); 
+    refresh();
+    in = getch();
+  }
   endwin();
   return 0;
 }
