@@ -31,8 +31,10 @@ typedef struct room_node {
 } rnode;
 
 typedef struct section_node {
-  pos *position;
-  pos *size;
+  int x_pos;
+  int y_pos;
+  int height;
+  int width;
   int corridor_pos;
   char corridor_direction;
   rnode *room;
@@ -46,34 +48,28 @@ unsigned char *ground = "_";
 unsigned char *test = "x";
 
 snode * add_snode(snode *head, int x, int y, int w, int h, char cdir, int cpos) {
-  snode *section = NULL;
-  pos *section_pos = NULL;
-  pos *section_size = NULL;
-  if ((section = malloc(sizeof *section)) == NULL 
-      || (section_pos = malloc(sizeof *section_pos)) == NULL
-      || (section_size = malloc(sizeof *section_size)) == NULL) {
-    printw("malloc error occurred");
+  snode *tmp = NULL;
+  if ((tmp = malloc(sizeof(snode))) == NULL) {
+    printw("malloc error ocurred");
     (void)exit(EXIT_FAILURE);
   }
-  section_pos->x = x;
-  section_pos->y = y;
-  section->position = section_pos;
-  section_size->x = w;
-  section_size->y = h;
-  section->size = section_size;
-  section->child1 = NULL;
-  section->child2 = NULL;
+  tmp->x_pos = x;
+  tmp->y_pos = y;
+  tmp->width = w;
+  tmp->height = h;
+  tmp->child1 = NULL;
+  tmp->child2 = NULL;
   if (head == NULL) { 
-    return section;
+    return tmp;
   }
-  section->corridor_pos = cpos;
-  section->corridor_direction = cdir;
+  tmp->corridor_pos = cpos;
+  tmp->corridor_direction = cdir;
   if (head->child1 == NULL) {
-    head->child1 = section;
+    head->child1 = tmp;
   } else {
-    head->child2 = section;
+    head->child2 = tmp;
   }
-  return section;
+  return tmp;
 }
 
 void fill_tiles(int x, int y, int width, int height, unsigned char *symbol) {
@@ -104,72 +100,71 @@ void create_rooms(snode *head) {
   int split, cpos;
   int min_x = (MIN_ROOM_WIDTH * 2) + (MIN_PADDING_X * 4);
   int min_y = (MIN_ROOM_HEIGHT * 2) + (MIN_PADDING_Y * 4);
-  if (direction == 0 && head->size->x > min_x) {
-    split = MIN_ROOM_WIDTH + (MIN_PADDING_X * 2) + (rand() % (head->size->x - min_x)); 
-    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, direction, split);
-    cpos = (rand() % (head->size->y - (MIN_PADDING_Y * 2))) + head->position->y + MIN_PADDING_Y;
-    create_rooms(add_snode(head, head->position->x, head->position->y, split, head->size->y, right, cpos));
-    create_rooms(add_snode(head, head->position->x + split, head->position->y, head->size->x - split, head->size->y, left, cpos));
-  } else if (direction == 1 && head->size->y > min_y) {
-    split = MIN_ROOM_HEIGHT + (MIN_PADDING_Y * 2) + (rand() % (head->size->y - min_y)); 
-    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, direction, split);
-    cpos = (rand() % (head->size->x - (MIN_PADDING_X * 2))) + head->position->x + MIN_PADDING_X;
-    create_rooms(add_snode(head, head->position->x, head->position->y, head->size->x, split, down, cpos));
-    create_rooms(add_snode(head, head->position->x, head->position->y + split, head->size->x, head->size->y - split, up, cpos));
+  if (direction == 0 && head->width > min_x) {
+    split = MIN_ROOM_WIDTH + (MIN_PADDING_X * 2) + (rand() % (head->width - min_x)); 
+    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->x_pos, head->y_pos, head->width, head->height, direction, split);
+    cpos = (rand() % (head->height - (MIN_PADDING_Y * 2))) + head->y_pos + MIN_PADDING_Y;
+    create_rooms(add_snode(head, head->x_pos, head->y_pos, split, head->height, right, cpos));
+    create_rooms(add_snode(head, head->x_pos + split, head->y_pos, head->width - split, head->height, left, cpos));
+  } else if (direction == 1 && head->height > min_y) {
+    split = MIN_ROOM_HEIGHT + (MIN_PADDING_Y * 2) + (rand() % (head->height - min_y)); 
+    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->x_pos, head->y_pos, head->width, head->height, direction, split);
+    cpos = (rand() % (head->width - (MIN_PADDING_X * 2))) + head->x_pos + MIN_PADDING_X;
+    create_rooms(add_snode(head, head->x_pos, head->y_pos, head->width, split, down, cpos));
+    create_rooms(add_snode(head, head->x_pos, head->y_pos + split, head->width, head->height - split, up, cpos));
   } else {
     rnode *room = NULL;
     pos *room_pos = NULL;
     pos *room_size = NULL;
-    if ((room = malloc(sizeof *room)) == NULL 
-        || (room_pos = malloc(sizeof *room_pos)) == NULL
-        || (room_size = malloc(sizeof *room_size)) == NULL) {
-      printw("malloc error occurred");
+    if ((room = malloc(sizeof(rnode))) == NULL 
+        || (room_pos = malloc(sizeof(pos))) == NULL
+        || (room_size = malloc(sizeof(pos))) == NULL) {
+      printw("malloc error ocurred");
       (void)exit(EXIT_FAILURE);
     }
-    room_pos->x = head->position->x + MIN_PADDING_X;
-    room_pos->y= head->position->y + MIN_PADDING_Y;
+    room_pos->x = head->x_pos + MIN_PADDING_X;
+    room_pos->y= head->y_pos + MIN_PADDING_Y;
     room->position = room_pos;
-    room_size->x = head->size->x - (MIN_PADDING_X * 2);
-    room_size->y = head->size->y - (MIN_PADDING_Y * 2);
+    room_size->x = head->width - (MIN_PADDING_X * 2);
+    room_size->y = head->height - (MIN_PADDING_Y * 2);
     room->size = room_size;
     head->room = room;
   }
 }
 
 void populate_matrix(snode *head) {
-  if (head->room != NULL && head->room->position != NULL && head->room->size != NULL) {
-    printw("%d %d %d %d", head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y);
+  if (head->room != NULL) {
     fill_tiles(head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, ground);
   }
   int c_x, c_y, c_w, c_h = 0;
   switch (head->corridor_direction) {
     case up: 
       c_x = head->corridor_pos;
-      c_y = head->position->y;
+      c_y = head->y_pos;
       c_w = MIN_PADDING_X;
       c_h = MIN_PADDING_Y;
       break;
     case right:
-      c_x = head->position->x + head->size->x - MIN_PADDING_X;
+      c_x = head->x_pos + head->width - MIN_PADDING_X;
       c_y = head->corridor_pos;
       c_w = MIN_PADDING_X;
       c_h = MIN_PADDING_Y;
       break;
     case down:
       c_x = head->corridor_pos;
-      c_y = head->position->y + head->size->y - MIN_PADDING_Y;
+      c_y = head->y_pos + head->height - MIN_PADDING_Y;
       c_w = MIN_PADDING_X;
       c_h = MIN_PADDING_Y;
       break;
     case left:
-      c_x = head->position->x;
+      c_x = head->x_pos;
       c_y = head->corridor_pos;
       c_w = MIN_PADDING_X;
       c_h = MIN_PADDING_Y;
       break;
   }
 
-  //printw("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, head->corridor_direction, head->corridor_pos);
+  //printw("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->x_pos, head->y_pos, head->width, head->height, head->corridor_direction, head->corridor_pos);
   //printw("%c %d %d %d %d %s \n", head->corridor_direction, c_x, c_y, c_w, c_h, ground);
   fill_tiles(c_x, c_y, c_w, c_h, ground);
 
@@ -192,8 +187,8 @@ snode * create_map() {
 
 player * create_player() {
   player *tmp;
-  if ((tmp = malloc(sizeof *tmp)) == NULL) {
-    printw("malloc error occurred");
+  if ((tmp = malloc(sizeof(player))) == NULL) {
+    printw("malloc error ocurred");
     (void)exit(EXIT_FAILURE);
   }
   unsigned char tile;
