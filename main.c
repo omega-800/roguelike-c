@@ -4,10 +4,11 @@
 #include <time.h>
 #include <ncurses.h>
 
-#define up 'u'
-#define right 'r'
-#define down 'd'
-#define left 'l'
+#define up 0
+#define right 1
+#define down 2
+#define left 3
+#define directions 4
 
 #define TOTAL_WIDTH 64
 #define TOTAL_HEIGHT 32
@@ -15,6 +16,10 @@
 #define MIN_ROOM_HEIGHT 2
 #define MIN_PADDING_X 2
 #define MIN_PADDING_Y 1
+
+#define WALL 1
+#define EMPTY 2
+#define PLAYER 3
 
 typedef struct coordinates {
   int x;
@@ -40,10 +45,7 @@ typedef struct section_node {
   struct section_node *child1;
 } snode;
 
-unsigned char *map[TOTAL_HEIGHT][TOTAL_WIDTH];
-unsigned char *wall = "#";
-unsigned char *ground = "_";
-unsigned char *test = "x";
+unsigned char *characters[] = { "x", "#", "_", "0" };
 
 snode * add_snode(snode *head, int x, int y, int w, int h, char cdir, int cpos) {
   snode *section = NULL;
@@ -76,7 +78,7 @@ snode * add_snode(snode *head, int x, int y, int w, int h, char cdir, int cpos) 
   return section;
 }
 
-void fill_tiles(int x, int y, int width, int height, unsigned char *symbol) {
+void fill_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int width, int height, char symbol) {
   for (int i = 0; i < height; i++) {
     for (int j = 0; j < width; j++) {
       map[i + y][j + x] = symbol;
@@ -84,15 +86,13 @@ void fill_tiles(int x, int y, int width, int height, unsigned char *symbol) {
   }
 }
 
-void init_map() {
-  fill_tiles(0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, wall);
-}
-
-void draw_map() {
-  printw("Press x to exit, hjkl to navigate\n");
+void print_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+  printw("Press x or q to exit, hjkl to navigate\n");
   for (int i = 0; i < TOTAL_HEIGHT; i++) {
     for (int j = 0; j < TOTAL_WIDTH; j++) {
-      printw("%s", map[i][j]);
+        attron(COLOR_PAIR(map[i][j]));
+        printw("%s", characters[map[i][j]]);
+        attroff(COLOR_PAIR(map[i][j]));
     }
     printw("\n");
   }
@@ -136,10 +136,10 @@ void create_rooms(snode *head) {
   }
 }
 
-void populate_matrix(snode *head) {
+void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head) {
   if (head->room != NULL && head->room->position != NULL && head->room->size != NULL) {
-    printw("%d %d %d %d", head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y);
-    fill_tiles(head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, ground);
+    //printw("%d %d %d %d", head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y);
+    fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
   }
   int c_x, c_y, c_w, c_h = 0;
   switch (head->corridor_direction) {
@@ -170,47 +170,112 @@ void populate_matrix(snode *head) {
   }
 
   //printw("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, head->corridor_direction, head->corridor_pos);
-  //printw("%c %d %d %d %d %s \n", head->corridor_direction, c_x, c_y, c_w, c_h, ground);
-  fill_tiles(c_x, c_y, c_w, c_h, ground);
+  //printw("%c %d %d %d %d %s \n", head->corridor_direction, c_x, c_y, c_w, c_h, EMPTY);
+  fill_matrix(map, c_x, c_y, c_w, c_h, EMPTY);
 
   if (head->child1 != NULL) {
-    populate_matrix(head->child1);
+    populate_matrix_rooms(map, head->child1);
   }
   if (head->child2 != NULL) {
-    populate_matrix(head->child2);
+    populate_matrix_rooms(map, head->child2);
   }
 }
 
-snode * create_map() {
-  init_map();
+snode * create_map_tree() {
   srand(time(NULL));
   snode *root = add_snode(NULL, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, 0, 0);
   create_rooms(root);
-  populate_matrix(root);
   return root;
 }
 
-player * create_player() {
+// spiral from random initial pos
+pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+  int x = random() % TOTAL_WIDTH;
+  int y = random() % TOTAL_HEIGHT;
+  char direction = up;
+  int steps = 1;
+  int steps_done = 0;
+  pos *tmp;
+
+  while (true) {
+    if (x < TOTAL_WIDTH && x >= 0 && y < TOTAL_HEIGHT && y >= 0 && map[y][x] == EMPTY) {
+      break;
+    }
+    switch (direction) {
+      case up:
+        y++;
+        break;
+      case right:
+        x++;
+        break;
+      case down:
+        y--;
+        break;
+      case left:
+        x--;
+        break;
+    }
+    steps_done += 1;
+    if (steps_done == (steps * 2)) {
+      steps++;
+      steps_done = 0; 
+    }
+    if (steps_done % steps == 0) {
+      direction = (direction + 1) % directions;
+    }
+  }
+
+  if ((tmp = malloc(sizeof *tmp)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  } 
+
+  tmp->x = x;
+  tmp->y = y;
+  return tmp;
+}
+
+player * create_player(pos *position) {
   player *tmp;
   if ((tmp = malloc(sizeof *tmp)) == NULL) {
     printw("malloc error occurred");
     (void)exit(EXIT_FAILURE);
   }
-  unsigned char tile;
+  tmp->position = position;
   return tmp;
 }
 
+void populate_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *node_map, player *p) {
+  populate_matrix_rooms(map, node_map);
+  fill_matrix(map, p->position->x, p->position->y, 1, 1, PLAYER);
+}
+
 int main() {
-  initscr();
-  snode *map = create_map();
-  player *p = create_player();
+  /*printf("%d",has_colors());
+  printf("%d",start_color() == OK);
+  printf("%d",COLORS);*/
+  char map[TOTAL_HEIGHT][TOTAL_WIDTH];
+  snode *node_map = create_map_tree();
+  fill_matrix(map, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, WALL);
+  populate_matrix_rooms(map, node_map);
+  pos *player_pos = find_free_tile(map);
+  player *p = create_player(player_pos);
   char in;
-  while (in != 'x') {
+
+  start_color();
+  init_pair(EMPTY, COLOR_YELLOW, COLOR_GREEN);
+  init_pair(WALL, COLOR_BLACK, COLOR_WHITE);
+  init_pair(PLAYER, COLOR_RED, COLOR_MAGENTA);
+  noecho();
+  initscr();
+  while (in != 'x' && in != 'q') {
     clear();
-    draw_map(); 
+    populate_matrix(map, node_map, p);
+    print_matrix(map); 
     refresh();
     in = getch();
   }
+
   endwin();
   return 0;
 }
