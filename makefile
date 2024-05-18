@@ -1,2 +1,2 @@
 all:
-	gcc -g main.c -o main -lncursesw
+	gcc -g main.c game.c map.c print.c character.c -o main -lncursesw
