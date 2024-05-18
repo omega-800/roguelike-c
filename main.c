@@ -10,16 +10,20 @@
 #define left 3
 #define directions 4
 
-#define TOTAL_WIDTH 64
+#define TOTAL_WIDTH 128
 #define TOTAL_HEIGHT 32
 #define MIN_ROOM_WIDTH 4
 #define MIN_ROOM_HEIGHT 2
 #define MIN_PADDING_X 2
 #define MIN_PADDING_Y 1
 
+#define PLAYER_MAX_HEALTH 64
+//#define COLOR_LIGHT_RED 8
+
 #define WALL 1
 #define EMPTY 2
 #define PLAYER 3
+#define HEALTH 4
 
 typedef struct coordinates {
   int x;
@@ -28,6 +32,7 @@ typedef struct coordinates {
 
 typedef struct player {
   pos *position;
+  char health;
 } player;
 
 typedef struct room_node {
@@ -44,6 +49,12 @@ typedef struct section_node {
   struct section_node *child2;
   struct section_node *child1;
 } snode;
+
+typedef struct game_instance {
+  player *p;
+  snode *node_map;
+  char map[TOTAL_HEIGHT][TOTAL_WIDTH];
+} gi;
 
 unsigned char *characters[] = { "x", "#", "_", "0" };
 
@@ -86,16 +97,31 @@ void fill_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int width, i
   }
 }
 
+void print_char(int x, int y, char type) {
+  mvaddch(y, x, *characters[type] | A_BOLD | COLOR_PAIR(type));
+}
+
+void print_stats(player *p) {
+  mvprintw(TOTAL_HEIGHT + 1, 0, "Health: "); 
+  for (int i = 0; i < PLAYER_MAX_HEALTH / 2; i++) {
+    mvaddch(TOTAL_HEIGHT + 1, 8 + i, (p->health - i * 2 == 1 ? '.' : p->health > i * 2 ? ':' : ' ') | A_BOLD | COLOR_PAIR(HEALTH));
+  }
+  mvprintw(TOTAL_HEIGHT + 1, 9 + (PLAYER_MAX_HEALTH / 2), "(%d / %d)", p->health, PLAYER_MAX_HEALTH); 
+  printw("\nPosition: x(%d) y(%d)\n", p->position->x, p->position->y);
+  printw("colors: %d", COLORS);
+}
+
 void print_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
-  printw("Press x or q to exit, hjkl to navigate\n");
   for (int i = 0; i < TOTAL_HEIGHT; i++) {
     for (int j = 0; j < TOTAL_WIDTH; j++) {
-        attron(COLOR_PAIR(map[i][j]));
-        printw("%s", characters[map[i][j]]);
-        attroff(COLOR_PAIR(map[i][j]));
+        print_char(j, i, map[i][j]);
+        //attron(COLOR_PAIR(map[i][j]));
+        //addstr(characters[map[i][j]]);
+        //attroff(COLOR_PAIR(map[i][j]));
     }
     printw("\n");
   }
+  printw("Press x or q to exit, hjkl to navigate\n");
 }
 
 // https://gamedev.stackexchange.com/questions/82059/algorithm-for-procedural-2d-map-with-connected-paths
@@ -129,15 +155,18 @@ void create_rooms(snode *head) {
     room_pos->x = head->position->x + MIN_PADDING_X;
     room_pos->y= head->position->y + MIN_PADDING_Y;
     room->position = room_pos;
+    clear();
+    printw("%d, %d", room_pos->x, room_pos->y);
     room_size->x = head->size->x - (MIN_PADDING_X * 2);
     room_size->y = head->size->y - (MIN_PADDING_Y * 2);
     room->size = room_size;
     head->room = room;
   }
+  refresh();
 }
 
 void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head) {
-  if (head->room != NULL && head->room->position != NULL && head->room->size != NULL) {
+  if (head->room && head->room->position && head->room->size && head->room->position->x) {
     //printw("%d %d %d %d", head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y);
     fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
   }
@@ -202,17 +231,13 @@ pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
       break;
     }
     switch (direction) {
-      case up:
-        y++;
+      case up: y++;
         break;
-      case right:
-        x++;
+      case right: x++;
         break;
-      case down:
-        y--;
+      case down: y--;
         break;
-      case left:
-        x--;
+      case left: x--;
         break;
     }
     steps_done += 1;
@@ -235,45 +260,120 @@ pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
   return tmp;
 }
 
-player * create_player(pos *position) {
+player * create_player(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
   player *tmp;
   if ((tmp = malloc(sizeof *tmp)) == NULL) {
     printw("malloc error occurred");
     (void)exit(EXIT_FAILURE);
   }
-  tmp->position = position;
+  
+  tmp->position = find_free_tile(map);
+  tmp->health = PLAYER_MAX_HEALTH;
   return tmp;
 }
 
-void populate_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *node_map, player *p) {
-  populate_matrix_rooms(map, node_map);
-  fill_matrix(map, p->position->x, p->position->y, 1, 1, PLAYER);
+void move_if_free(int x, int y, player *p, char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+  if (map[p->position->y + y][p->position->x + x] != WALL){
+    map[p->position->y][p->position->x] = EMPTY;
+    print_char(p->position->x, p->position->y, EMPTY);
+    
+    p->position->y += y;
+    p->position->x += x;
+
+    map[p->position->y][p->position->x] = PLAYER;
+    print_char(p->position->x, p->position->y, PLAYER);
+    //move(p->position->y, p->position->x);
+  } else {
+    p->health--;
+  }
 }
 
-int main() {
-  /*printf("%d",has_colors());
-  printf("%d",start_color() == OK);
-  printf("%d",COLORS);*/
+void handle_input(char in, player *p, char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+  switch (in) {
+    case 'k': move_if_free(0, -1, p, map);
+      break;
+    case 'l': move_if_free(1, 0, p, map);
+      break;
+    case 'j': move_if_free(0, 1, p, map);
+      break;
+    case 'h': move_if_free(-1, 0, p, map);
+      break;
+  }
+}
+
+void free_map_tree(snode *head) {
+  if (head->child1 != NULL) free_map_tree(head->child1);
+  if (head->child2 != NULL) free_map_tree(head->child2);
+  if (head->room != NULL) {
+    free(head->room->position);
+    free(head->room->size);
+    free(head->room);
+  }
+  free(head->position);
+  free(head->size);
+  free(head);
+}
+
+void free_player(player *p) {
+  free(p->position);
+  free(p);
+}
+
+void game_over(gi *game) {
+  clear();
+  printw("You lost!\nStart new game? (y/n)");
+  refresh();
+  if(getch() != 'y') exit;
+  free_map_tree(game->node_map);
+  free_player(game->p);
+  free(game);
+}
+
+void create_colors() {
+  start_color();
+  //init_color(COLOR_LIGHT_RED, 600, 300, 300);
+  init_pair(EMPTY, COLOR_YELLOW, COLOR_GREEN);
+  init_pair(WALL, COLOR_BLACK, COLOR_WHITE);
+  init_pair(PLAYER, COLOR_RED, COLOR_MAGENTA);
+  init_pair(HEALTH, COLOR_RED, COLOR_WHITE);
+  noecho();
+}
+
+gi * create_game_instance() {
+  gi *tmp;
+  if ((tmp = malloc(sizeof *tmp)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
   char map[TOTAL_HEIGHT][TOTAL_WIDTH];
   snode *node_map = create_map_tree();
   fill_matrix(map, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, WALL);
   populate_matrix_rooms(map, node_map);
-  pos *player_pos = find_free_tile(map);
-  player *p = create_player(player_pos);
-  char in;
+  player *p = create_player(map);
+  fill_matrix(map, p->position->x, p->position->y, 1, 1, PLAYER);
+  tmp->p = p;
+  tmp->node_map = node_map;
+  memcpy(tmp->map, map, sizeof(tmp->map)); 
+  return tmp;
+}
 
-  start_color();
-  init_pair(EMPTY, COLOR_YELLOW, COLOR_GREEN);
-  init_pair(WALL, COLOR_BLACK, COLOR_WHITE);
-  init_pair(PLAYER, COLOR_RED, COLOR_MAGENTA);
-  noecho();
+int main() {
+  gi *game = create_game_instance();
+  char in;
   initscr();
+  create_colors();
+  print_matrix(game->map); 
+  //move(p->position->y, p->position->x);
   while (in != 'x' && in != 'q') {
-    clear();
-    populate_matrix(map, node_map, p);
-    print_matrix(map); 
-    refresh();
-    in = getch();
+    if (game->p->health < 1) {
+      game_over(game); 
+      game = create_game_instance();
+    } else {
+      print_stats(game->p);
+      refresh();
+      in = getch();
+      handle_input(in, game->p, game->map);
+    }
   }
 
   endwin();
