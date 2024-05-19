@@ -15,10 +15,15 @@ typedef struct room_node {
   pos *size;
 } rnode;
 
+typedef struct room_list_node {
+  rnode *cur;
+  struct room_list_node *next;
+} rlnode;
+
 typedef struct section_node {
   pos *position;
   pos *size;
-  int corridor_pos;
+  pos *corridor_pos;
   char corridor_direction;
   rnode *room;
   struct section_node *child2;
@@ -27,13 +32,18 @@ typedef struct section_node {
 
 int rand_range(int min, int max);
 void fill_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int width, int height, char symbol);
-snode * add_snode(snode *head, int x, int y, int w, int h, char cdir, int cpos);
+snode * add_snode(snode *head, int x, int y, int w, int h);
+void create_rnode_list(snode *head, rlnode *rooms);
+rlnode * create_corridors(snode *head);
 void create_rooms(snode *head);
 void free_map_tree(snode *head);
+void free_rlnodes(rlnode *rooms);
 snode * create_map_tree();
 int distance(pos *a, pos *b);
 pos * find_free_tile_from(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int radius);
 pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]);
 void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head);
+void populate_matrix_corridors(char map[TOTAL_HEIGHT][TOTAL_WIDTH], rlnode *rooms);
+void draw_map_and_free(char map[TOTAL_HEIGHT][TOTAL_WIDTH]); 
 
 #endif

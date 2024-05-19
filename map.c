@@ -16,7 +16,7 @@ void fill_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int width, i
   }
 }
 
-snode * add_snode(snode *head, int x, int y, int w, int h, char cdir, int cpos) {
+snode * add_snode(snode *head, int x, int y, int w, int h) {
   snode *section = NULL;
   pos *section_pos = NULL;
   pos *section_size = NULL;
@@ -37,14 +37,38 @@ snode * add_snode(snode *head, int x, int y, int w, int h, char cdir, int cpos) 
   if (head == NULL) { 
     return section;
   }
-  section->corridor_pos = cpos;
-  section->corridor_direction = cdir;
   if (head->child1 == NULL) {
     head->child1 = section;
   } else {
     head->child2 = section;
   }
   return section;
+}
+
+void append_rlnode(rlnode *head, rlnode *next) {
+  if (head->next) {
+    append_rlnode(head->next, next);
+  } else {
+    head->next = next;
+  }
+}
+
+void create_rnode_list(snode *head, rlnode *rooms) {
+  if (head->room) {
+    if (rooms->cur){
+      rlnode *newnode;
+      if ((newnode = malloc(sizeof *newnode)) == NULL) {
+        printw("malloc error occurred");
+        (void)exit(EXIT_FAILURE);
+      }
+      newnode->cur = head->room;
+      append_rlnode(rooms, newnode);
+    } else {
+      rooms->cur = head->room;
+    }
+  }
+  if (head->child1) create_rnode_list(head->child1, rooms);
+  if (head->child2) create_rnode_list(head->child2, rooms);
 }
 
 // https://gamedev.stackexchange.com/questions/82059/algorithm-for-procedural-2d-map-with-connected-paths
@@ -56,15 +80,14 @@ void create_rooms(snode *head) {
   if (direction == 0 && head->size->x > min_x) {
     split = MIN_ROOM_WIDTH + (MIN_PADDING_X * 2) + (rand() % (head->size->x - min_x)); 
     //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, direction, split);
-    cpos = (rand() % (head->size->y - (MIN_PADDING_Y * 2))) + head->position->y + MIN_PADDING_Y;
-    create_rooms(add_snode(head, head->position->x, head->position->y, split, head->size->y, right, cpos));
-    create_rooms(add_snode(head, head->position->x + split, head->position->y, head->size->x - split, head->size->y, left, cpos));
+    create_rooms(add_snode(head, head->position->x, head->position->y, split, head->size->y));
+    create_rooms(add_snode(head, head->position->x + split, head->position->y, head->size->x - split, head->size->y));
+    
   } else if (direction == 1 && head->size->y > min_y) {
     split = MIN_ROOM_HEIGHT + (MIN_PADDING_Y * 2) + (rand() % (head->size->y - min_y)); 
     //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, direction, split);
-    cpos = (rand() % (head->size->x - (MIN_PADDING_X * 2))) + head->position->x + MIN_PADDING_X;
-    create_rooms(add_snode(head, head->position->x, head->position->y, head->size->x, split, down, cpos));
-    create_rooms(add_snode(head, head->position->x, head->position->y + split, head->size->x, head->size->y - split, up, cpos));
+    create_rooms(add_snode(head, head->position->x, head->position->y, head->size->x, split));
+    create_rooms(add_snode(head, head->position->x, head->position->y + split, head->size->x, head->size->y - split));
   } else {
     rnode *room = NULL;
     pos *room_pos = NULL;
@@ -99,10 +122,25 @@ void free_map_tree(snode *head) {
   free(head);
 }
 
+void free_rlnodes(rlnode *rooms) {
+  if(rooms->next) free_rlnodes(rooms->next);
+  free(rooms);
+}
+
 snode * create_map_tree() {
-  snode *root = add_snode(NULL, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, 0, 0);
+  snode *root = add_snode(NULL, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT);
   create_rooms(root);
   return root;
+}
+
+rlnode * create_corridors(snode *root) {
+  rlnode *rooms;
+  if ((rooms = malloc(sizeof *rooms)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  create_rnode_list(root, rooms);
+  return rooms;
 }
 
 pos * find_free_tile_from(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int startx, int starty, int radius) {
@@ -163,47 +201,31 @@ pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
   return find_free_tile_from(map, x, y, TOTAL_WIDTH + TOTAL_HEIGHT);
 }
 
-void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head) {
-  if (head->child1) {
-    populate_matrix_rooms(map, head->child1);
-  }
-  if (head->child2) {
-    populate_matrix_rooms(map, head->child2);
-  }
-  //???
-  if (head->room && head->room->position && head->room->size && head->room->position->x) {
-    //printw("%d %d %d %d", head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y);
-    fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
-  }
-  int c_x, c_y, c_w, c_h = 0;
-  switch (head->corridor_direction) {
-    case up: 
-      c_x = head->corridor_pos;
-      c_y = head->position->y;
-      c_w = MIN_PADDING_X;
-      c_h = MIN_PADDING_Y;
-      break;
-    case right:
-      c_x = head->position->x + head->size->x - MIN_PADDING_X;
-      c_y = head->corridor_pos;
-      c_w = MIN_PADDING_X;
-      c_h = MIN_PADDING_Y;
-      break;
-    case down:
-      c_x = head->corridor_pos;
-      c_y = head->position->y + head->size->y - MIN_PADDING_Y;
-      c_w = MIN_PADDING_X;
-      c_h = MIN_PADDING_Y;
-      break;
-    case left:
-      c_x = head->position->x;
-      c_y = head->corridor_pos;
-      c_w = MIN_PADDING_X;
-      c_h = MIN_PADDING_Y;
-      break;
-  }
+void populate_matrix_corridors(char map[TOTAL_HEIGHT][TOTAL_WIDTH], rlnode *rooms) {
+  if (!rooms->next) return;
+  int from_x = rand_range(rooms->cur->position->x, rooms->cur->size->x + rooms->cur->position->x);
+  int from_y = rand_range(rooms->cur->position->y, rooms->cur->size->y + rooms->cur->position->y);
+  int to_x = rand_range(rooms->next->cur->position->x, rooms->next->cur->size->x + rooms->next->cur->position->x);
+  int to_y = rand_range(rooms->next->cur->position->y, rooms->next->cur->size->y + rooms->next->cur->position->y);
+  char minus_x = from_x > to_x;
+  char minus_y = from_y > to_y;
+  fill_matrix(map, minus_x ? to_x : from_x, minus_y ? to_y : from_y, abs(from_x - to_x), 1, EMPTY);
+  fill_matrix(map, minus_x ? to_x : from_x, minus_y ? to_y : from_y, 2, abs(from_y - to_y), EMPTY);
+  populate_matrix_corridors(map, rooms->next);  
+}
 
-  //printw("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, head->corridor_direction, head->corridor_pos);
-  //printw("%c %d %d %d %d %s \n", head->corridor_direction, c_x, c_y, c_w, c_h, EMPTY);
-  fill_matrix(map, c_x, c_y, c_w, c_h, EMPTY);
+void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head) {
+  if (head->child1) populate_matrix_rooms(map, head->child1);
+  if (head->child2) populate_matrix_rooms(map, head->child2);
+  if (head->room) fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
+}
+
+void draw_map_and_free(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+  snode *node_map = create_map_tree();
+  rlnode *corridors = create_corridors(node_map);
+  fill_matrix(map, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, WALL);
+  populate_matrix_rooms(map, node_map);
+  populate_matrix_corridors(map, corridors);
+  free_map_tree(node_map);
+  free_rlnodes(corridors);
 }

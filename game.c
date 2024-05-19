@@ -2,10 +2,10 @@
 
 // i=lvl, enemy_count, e_min_lvl, e_max_lvl
 const char level_stats[MAX_LEVELS][3] = {
-  { 4, 1, 2 },
-  { 4, 1, 3 },
-  { 5, 2, 4 },
-  { 6, 3, 4 },
+  { 8, 1, 2 },
+  { 12, 1, 3 },
+  { 16, 2, 4 },
+  { 32, 3, 4 },
 };
 
 void print_stats(gi *game) {
@@ -86,7 +86,11 @@ void move_if_free(int x, int y, gi *game) {
       game->p->idle_streak++;
     } else {
       game->p->idle_streak = 0;
-      if (game->p->health + PLAYER_IDLE_HEAL <= PLAYER_MAX_HEALTH) game->p->health += PLAYER_IDLE_HEAL;
+      if (game->p->health + PLAYER_IDLE_HEAL <= PLAYER_MAX_HEALTH) {
+        game->p->health += PLAYER_IDLE_HEAL;
+      } else {
+        game->p->health = PLAYER_MAX_HEALTH;
+      }
     }
     //log_msg(LOGFILE, "moved player: x(%d) y(%d)", p_pos->x, p_pos->y);
   }
@@ -151,10 +155,8 @@ gi * create_game_instance() {
   }
 
   char map[TOTAL_HEIGHT][TOTAL_WIDTH];
-  snode *node_map = create_map_tree();
-  fill_matrix(map, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, WALL);
-  populate_matrix_rooms(map, node_map);
-  free_map_tree(node_map);
+  draw_map_and_free(map);
+
   player *p = create_player(find_free_tile(map));
   fill_matrix(map, p->position->x, p->position->y, 1, 1, PLAYER);
   log_msg(LOGFILE, "created player: x(%d) y(%d)", p->position->x, p->position->y);
