@@ -1,5 +1,13 @@
 #include "map.h"
 
+int distance(pos *a, pos *b) {
+  return abs(a->x - b->x) + abs(a->y - b->y);
+}
+
+int rand_range(int min, int max) {
+  return (random() % (max - min + 1)) + min - 1;
+}
+
 void fill_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int width, int height, char symbol) {
   for (int i = 0; i < height; i++) {
     for (int j = 0; j < width; j++) {
@@ -67,23 +75,21 @@ void create_rooms(snode *head) {
       printw("malloc error occurred");
       (void)exit(EXIT_FAILURE);
     }
-    room_pos->x = head->position->x + MIN_PADDING_X;
-    room_pos->y= head->position->y + MIN_PADDING_Y;
-    room->position = room_pos;
-    clear();
-    printw("%d, %d", room_pos->x, room_pos->y);
-    room_size->x = head->size->x - (MIN_PADDING_X * 2);
-    room_size->y = head->size->y - (MIN_PADDING_Y * 2);
+
+    room_size->x = rand_range(MIN_ROOM_WIDTH, head->size->x - (MIN_PADDING_X * 2));
+    room_size->y = rand_range(MIN_ROOM_HEIGHT, head->size->y - (MIN_PADDING_Y * 2));
     room->size = room_size;
+    room_pos->x = rand_range(head->position->x + MIN_PADDING_X, head->position->x + head->size->x - MIN_PADDING_X - room_size->x);
+    room_pos->y = rand_range(head->position->y + MIN_PADDING_Y, head->position->y + head->size->y - MIN_PADDING_Y - room_size->y);
+    room->position = room_pos;
     head->room = room;
   }
-  refresh();
 }
 
 void free_map_tree(snode *head) {
-  if (head->child1 != NULL) free_map_tree(head->child1);
-  if (head->child2 != NULL) free_map_tree(head->child2);
-  if (head->room != NULL) {
+  if (head->child1) free_map_tree(head->child1);
+  if (head->child2) free_map_tree(head->child2);
+  if (head->room) {
     free(head->room->position);
     free(head->room->size);
     free(head->room);
@@ -99,25 +105,38 @@ snode * create_map_tree() {
   return root;
 }
 
-// spiral from random initial pos
-pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
-  int x = random() % TOTAL_WIDTH;
-  int y = random() % TOTAL_HEIGHT;
-  char direction = up;
+pos * find_free_tile_from(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int startx, int starty, int radius) {
+  int x = startx;
+  int y = starty;
+  char direction = rand() % directions;
   int steps = 1;
   int steps_done = 0;
   pos *tmp;
 
+  if ((tmp = malloc(sizeof *tmp)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  } 
+
+  tmp->y = starty; 
+  tmp->x = startx; 
+
   while (true) {
-    if (x < TOTAL_WIDTH && x >= 0 && y < TOTAL_HEIGHT && y >= 0 && map[y][x] == EMPTY) {
+    if (steps > radius * 3) {
+      return tmp;
+    } else if (x >= TOTAL_WIDTH || x < 0 || y >= TOTAL_HEIGHT || y < 0) {
+      if ((x >= 0 ? x - TOTAL_WIDTH > startx : x * -1 > TOTAL_WIDTH - startx) && (y >= 0 ? y - TOTAL_HEIGHT > starty : y * -1 > TOTAL_HEIGHT - starty)) {
+        return tmp;
+      }
+    } else if (map[y][x] == EMPTY && abs(x - startx) + abs(y - starty) <= radius) {
       break;
     }
     switch (direction) {
-      case up: y++;
+      case up: y--;
         break;
       case right: x++;
         break;
-      case down: y--;
+      case down: y++;
         break;
       case left: x--;
         break;
@@ -132,17 +151,26 @@ pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
     }
   }
 
-  if ((tmp = malloc(sizeof *tmp)) == NULL) {
-    printw("malloc error occurred");
-    (void)exit(EXIT_FAILURE);
-  } 
-
   tmp->x = x;
   tmp->y = y;
   return tmp;
 }
 
+// spiral from random initial pos
+pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+  int x = random() % TOTAL_WIDTH;
+  int y = random() % TOTAL_HEIGHT;
+  return find_free_tile_from(map, x, y, TOTAL_WIDTH + TOTAL_HEIGHT);
+}
+
 void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head) {
+  if (head->child1) {
+    populate_matrix_rooms(map, head->child1);
+  }
+  if (head->child2) {
+    populate_matrix_rooms(map, head->child2);
+  }
+  //???
   if (head->room && head->room->position && head->room->size && head->room->position->x) {
     //printw("%d %d %d %d", head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y);
     fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
@@ -178,11 +206,4 @@ void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head) {
   //printw("x:%d y:%d w:%d h:%d d:%c p:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, head->corridor_direction, head->corridor_pos);
   //printw("%c %d %d %d %d %s \n", head->corridor_direction, c_x, c_y, c_w, c_h, EMPTY);
   fill_matrix(map, c_x, c_y, c_w, c_h, EMPTY);
-
-  if (head->child1 != NULL) {
-    populate_matrix_rooms(map, head->child1);
-  }
-  if (head->child2 != NULL) {
-    populate_matrix_rooms(map, head->child2);
-  }
 }

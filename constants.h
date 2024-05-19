@@ -7,20 +7,21 @@
 #define left 3
 #define directions 4
 
-#define MAX_LEVELS 16
 #define TOTAL_WIDTH 128
 #define TOTAL_HEIGHT 32
-#define MIN_ROOM_WIDTH 4
-#define MIN_ROOM_HEIGHT 2
-#define MIN_PADDING_X 2
-#define MIN_PADDING_Y 1
 
 //#define COLOR_LIGHT_RED 8
 
-#define WALL 1
-#define EMPTY 2
-#define PLAYER 3
-#define HEALTH 4
+#define ENEMY_1 1
+#define ENEMY_2 2
+#define ENEMY_3 3
+#define ENEMY_4 4
+#define WALL 5
+#define EMPTY 6
+#define PLAYER 7
+#define DEAD 8
+
+#define HEALTH 9
 
 typedef struct coordinates {
   int x;

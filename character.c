@@ -1,10 +1,11 @@
 #include "character.h"
 
-const char enemies[4][2] = {
-  { 4, 1 },
-  { 6, 2 },
-  { 16, 1 },
-  { 2, 8 },
+// i=lvl, health, atk, sight
+const char enemies[4][3] = {
+  { 4, 1, 4 },
+  { 6, 2, 8 },
+  { 16, 1, 16 },
+  { 4, 8, 8 },
 };
 
 player * create_player(pos *p_position) {
@@ -17,6 +18,8 @@ player * create_player(pos *p_position) {
   tmp->position = p_position;
   tmp->health = PLAYER_MAX_HEALTH;
   tmp->attack = PLAYER_INIT_ATTACK;
+  tmp->idle_streak = 0;
+  //tmp->move_p = move_player;
   return tmp;
 }
 
@@ -28,9 +31,10 @@ npc * create_npc(pos *n_position, char level, char friendly) {
   }
   
   tmp->position = n_position;
-  tmp->health = enemies[level][0];
-  tmp->attack = enemies[level][1];
+  tmp->level = level;
   tmp->friendly = friendly;
+  tmp->health = enemies[level][0];
+  //tmp->move_p = move_npc;
   return tmp;
 }
 
@@ -43,3 +47,12 @@ void free_npc(npc *p) {
   free(p->position);
   free(p);
 }
+/*
+void move_player(player *p){
+  p->position->x = 0;
+}
+
+void move_npc(npc *p){
+
+}
+*/

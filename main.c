@@ -19,7 +19,7 @@ int main() {
       print_stats(game);
       refresh();
       in = getch();
-      handle_input(in, game->p, game->levels[game->cur_level]->map);
+      handle_input(in, game);
     }
   }
   endwin();
