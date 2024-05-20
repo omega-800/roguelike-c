@@ -3,8 +3,8 @@
 // i=lvl, enemy_count, e_min_lvl, e_max_lvl, potions
 const char level_stats[MAX_LEVELS][4] = {
   { 10, 1, 2, 8 },
-  { 16, 1, 3, 8 },
-  { 24, 2, 4, 16 },
+  { 16, 1, 3, 12 },
+  { 24, 2, 4, 12 },
   { 32, 3, 4, 1 },
 };
 
