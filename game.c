@@ -152,7 +152,7 @@ void move_if_free(int x, int y, gi *game) {
   for (int i = 0; i < level_stats[game->cur_level][0]; i++) {
     if (curlvl->npcs[i]->health <= 0) continue;
     if (distance(curlvl->npcs[i]->position, p_pos) == 1) {
-      game->p->health -= enemies[curlvl->npcs[i]->level][1];
+      game->p->health -= enemies[curlvl->npcs[i]->level-1][1];
       //game->p->health -= enemies[curlvl->npcs[i]->level - '0'][1];
       game->p->idle_streak = 0;
     } else {
