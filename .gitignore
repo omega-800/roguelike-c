@@ -1,3 +1,5 @@
 a.out
 main
 logfile.txt
+debug.log*
+vgcore*

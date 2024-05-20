@@ -34,6 +34,7 @@ snode * add_snode(snode *head, int x, int y, int w, int h) {
   section->size = section_size;
   section->child1 = NULL;
   section->child2 = NULL;
+  section->room = NULL;
   if (head == NULL) { 
     return section;
   }
@@ -53,14 +54,21 @@ void append_rlnode(rlnode *head, rlnode *next) {
   }
 }
 
+rlnode * create_rlnode() {
+  rlnode *tmp = NULL;
+  if ((tmp = malloc(sizeof *tmp)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  tmp->next = NULL;
+  tmp->cur = NULL;
+  return tmp;
+}
+
 void create_rnode_list(snode *head, rlnode *rooms) {
   if (head->room) {
     if (rooms->cur){
-      rlnode *newnode;
-      if ((newnode = malloc(sizeof *newnode)) == NULL) {
-        printw("malloc error occurred");
-        (void)exit(EXIT_FAILURE);
-      }
+      rlnode *newnode = create_rlnode();
       newnode->cur = head->room;
       append_rlnode(rooms, newnode);
     } else {
@@ -71,24 +79,7 @@ void create_rnode_list(snode *head, rlnode *rooms) {
   if (head->child2) create_rnode_list(head->child2, rooms);
 }
 
-// https://gamedev.stackexchange.com/questions/82059/algorithm-for-procedural-2d-map-with-connected-paths
-void create_rooms(snode *head) {
-  char direction = rand() % 2;
-  int split, cpos;
-  int min_x = (MIN_ROOM_WIDTH * 2) + (MIN_PADDING_X * 4);
-  int min_y = (MIN_ROOM_HEIGHT * 2) + (MIN_PADDING_Y * 4);
-  if (direction == 0 && head->size->x > min_x) {
-    split = MIN_ROOM_WIDTH + (MIN_PADDING_X * 2) + (rand() % (head->size->x - min_x)); 
-    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, direction, split);
-    create_rooms(add_snode(head, head->position->x, head->position->y, split, head->size->y));
-    create_rooms(add_snode(head, head->position->x + split, head->position->y, head->size->x - split, head->size->y));
-    
-  } else if (direction == 1 && head->size->y > min_y) {
-    split = MIN_ROOM_HEIGHT + (MIN_PADDING_Y * 2) + (rand() % (head->size->y - min_y)); 
-    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, direction, split);
-    create_rooms(add_snode(head, head->position->x, head->position->y, head->size->x, split));
-    create_rooms(add_snode(head, head->position->x, head->position->y + split, head->size->x, head->size->y - split));
-  } else {
+rnode * create_room(snode *head) {
     rnode *room = NULL;
     pos *room_pos = NULL;
     pos *room_size = NULL;
@@ -105,7 +96,29 @@ void create_rooms(snode *head) {
     room_pos->x = rand_range(head->position->x + MIN_PADDING_X, head->position->x + head->size->x - MIN_PADDING_X - room_size->x);
     room_pos->y = rand_range(head->position->y + MIN_PADDING_Y, head->position->y + head->size->y - MIN_PADDING_Y - room_size->y);
     room->position = room_pos;
-    head->room = room;
+
+    return room;
+}
+
+// https://gamedev.stackexchange.com/questions/82059/algorithm-for-procedural-2d-map-with-connected-paths
+void create_rooms(snode *head) {
+  char direction = rand() % 2;
+  int split;
+  int min_x = (MIN_ROOM_WIDTH * 2) + (MIN_PADDING_X * 4);
+  int min_y = (MIN_ROOM_HEIGHT * 2) + (MIN_PADDING_Y * 4);
+  if (direction == 0 && head->size->x > min_x) {
+    split = MIN_ROOM_WIDTH + (MIN_PADDING_X * 2) + (rand() % (head->size->x - min_x)); 
+    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, direction, split);
+    create_rooms(add_snode(head, head->position->x, head->position->y, split, head->size->y));
+    create_rooms(add_snode(head, head->position->x + split, head->position->y, head->size->x - split, head->size->y));
+    
+  } else if (direction == 1 && head->size->y > min_y) {
+    split = MIN_ROOM_HEIGHT + (MIN_PADDING_Y * 2) + (rand() % (head->size->y - min_y)); 
+    //printw("x:%d y:%d w:%d h:%d d:%d s:%d\n", head->position->x, head->position->y, head->size->x, head->size->y, direction, split);
+    create_rooms(add_snode(head, head->position->x, head->position->y, head->size->x, split));
+    create_rooms(add_snode(head, head->position->x, head->position->y + split, head->size->x, head->size->y - split));
+  } else {
+    head->room = create_room(head);
   }
 }
 
@@ -134,11 +147,7 @@ snode * create_map_tree() {
 }
 
 rlnode * create_corridors(snode *root) {
-  rlnode *rooms;
-  if ((rooms = malloc(sizeof *rooms)) == NULL) {
-    printw("malloc error occurred");
-    (void)exit(EXIT_FAILURE);
-  }
+  rlnode *rooms = create_rlnode();
   create_rnode_list(root, rooms);
   return rooms;
 }
@@ -149,7 +158,7 @@ pos * find_free_tile_from(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int startx, int s
   char direction = rand() % directions;
   int steps = 1;
   int steps_done = 0;
-  pos *tmp;
+  pos *tmp = NULL;
 
   if ((tmp = malloc(sizeof *tmp)) == NULL) {
     printw("malloc error occurred");
@@ -203,10 +212,10 @@ pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
 
 void populate_matrix_corridors(char map[TOTAL_HEIGHT][TOTAL_WIDTH], rlnode *rooms) {
   if (!rooms->next) return;
-  int from_x = rand_range(rooms->cur->position->x, rooms->cur->size->x + rooms->cur->position->x);
-  int from_y = rand_range(rooms->cur->position->y, rooms->cur->size->y + rooms->cur->position->y);
-  int to_x = rand_range(rooms->next->cur->position->x, rooms->next->cur->size->x + rooms->next->cur->position->x);
-  int to_y = rand_range(rooms->next->cur->position->y, rooms->next->cur->size->y + rooms->next->cur->position->y);
+  int from_x = rand_range(rooms->cur->position->x + 1, rooms->cur->size->x + rooms->cur->position->x - 1);
+  int from_y = rand_range(rooms->cur->position->y + 1, rooms->cur->size->y + rooms->cur->position->y - 1);
+  int to_x = rand_range(rooms->next->cur->position->x + 1, rooms->next->cur->size->x + rooms->next->cur->position->x - 1);
+  int to_y = rand_range(rooms->next->cur->position->y + 1, rooms->next->cur->size->y + rooms->next->cur->position->y - 1);
   char minus_x = from_x > to_x;
   char minus_y = from_y > to_y;
   fill_matrix(map, minus_x ? to_x : from_x, minus_y ? to_y : from_y, abs(from_x - to_x), 1, EMPTY);
@@ -217,7 +226,8 @@ void populate_matrix_corridors(char map[TOTAL_HEIGHT][TOTAL_WIDTH], rlnode *room
 void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head) {
   if (head->child1) populate_matrix_rooms(map, head->child1);
   if (head->child2) populate_matrix_rooms(map, head->child2);
-  if (head->room) fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
+  //???
+  if (head->room && head->room->position && head->room->position->x) fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
 }
 
 void draw_map_and_free(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {

@@ -6,7 +6,7 @@
 int main() {
   srand(time(NULL));
   gi *game = create_game_instance();
-  char in;
+  char in = '0';
   initscr();
   create_colors();
   print_matrix(game->levels[game->cur_level]->map); 

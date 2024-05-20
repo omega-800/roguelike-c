@@ -7,7 +7,7 @@
 
 #define PLAYER_MAX_HEALTH 32
 #define PLAYER_INIT_ATTACK 2
-#define PLAYER_IDLE_HEAL 2
+#define PLAYER_IDLE_HEAL 1
 #define PLAYER_IDLE_TIME 16
 
 extern const char enemies[4][3];

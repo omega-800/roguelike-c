@@ -34,6 +34,7 @@ npc * create_npc(pos *n_position, char level, char friendly) {
   tmp->level = level;
   tmp->friendly = friendly;
   tmp->health = enemies[level][0];
+  //tmp->health = enemies[level - '0'][0];
   //tmp->move_p = move_npc;
   return tmp;
 }

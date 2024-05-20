@@ -13,13 +13,13 @@
 
 typedef struct level {
   char map[TOTAL_HEIGHT][TOTAL_WIDTH];
-  npc *npcs[];
+  npc **npcs;
 } lvl;
 
 typedef struct game_instance {
   player *p;
   unsigned char cur_level;
-  lvl *levels[MAX_LEVELS];
+  lvl **levels;
 } gi;
 
 void print_stats(gi *game);

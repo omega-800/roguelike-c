@@ -1,9 +1,10 @@
 #include "print.h"
 
-unsigned char *characters[] = { "x", "1", "2", "3", "4", "#", "_", "@", "T" };
+char *characters[] = { "x", "1", "2", "3", "4", "#", "_", "@", "T" };
 
 void print_char(int x, int y, char type) {
   mvaddch(y, x, *characters[type] | A_BOLD | COLOR_PAIR(type));
+  //mvaddch(y, x, *characters[type - '0'] | A_BOLD | COLOR_PAIR(type));
 }
 
 void print_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {

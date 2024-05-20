@@ -12,7 +12,7 @@ void print_stats(gi *game) {
   mvprintw(TOTAL_HEIGHT, 0,"Press x or q to exit, hjkl to navigate\n"); 
   mvprintw(TOTAL_HEIGHT + 1, 0, "Health: "); 
   for (int i = 0; i < PLAYER_MAX_HEALTH / 2; i++) {
-    mvaddch(TOTAL_HEIGHT + 1, 8 + i, (game->p->health - i * 2 == 1 ? '.' : game->p->health > i * 2 ? ':' : ' ') | A_BOLD | COLOR_PAIR(HEALTH));
+    mvaddch(TOTAL_HEIGHT + 1, 8 + i, (game->p->health - i * 2 == 1 ? '+' : game->p->health > i * 2 ? '#' : ' ') | A_BOLD | COLOR_PAIR(HEALTH));
   }
   mvprintw(TOTAL_HEIGHT + 1, 9 + (PLAYER_MAX_HEALTH / 2), "(%d / %d)", game->p->health, PLAYER_MAX_HEALTH); 
   printw("\nLevel: %d / %d\n", game->cur_level + 1, MAX_LEVELS);
@@ -62,11 +62,9 @@ void move_if_free(int x, int y, gi *game) {
   if (curlvl->map[p_pos->y + y][p_pos->x + x] <= 4) {
     // either an enemy or something broke
     npc *enemy;
-    int enemy_i;
     for (int i = 0; i < level_stats[game->cur_level][0]; i++) {
       if (curlvl->npcs[i]->position->x == p_pos->x + x && curlvl->npcs[i]->position->y == p_pos->y + y) {
         enemy = curlvl->npcs[i];
-        enemy_i = i;
         break;
       }
     }
@@ -99,6 +97,7 @@ void move_if_free(int x, int y, gi *game) {
     if (curlvl->npcs[i]->health <= 0) continue;
     if (distance(curlvl->npcs[i]->position, p_pos) == 1) {
       game->p->health -= enemies[curlvl->npcs[i]->level][1];
+      //game->p->health -= enemies[curlvl->npcs[i]->level - '0'][1];
       game->p->idle_streak = 0;
     } else {
       move_npc(curlvl->npcs[i], p_pos, curlvl);
@@ -129,57 +128,53 @@ void game_over(gi *game) {
   clear();
   printw("You lost!\nStart new game? (y/n)");
   refresh();
-  if(getch() != 'y') exit;
+  if(getch() != 'y') exit(1);
   free_game(game);
+}
+
+lvl * create_lvl(int stage) {
+  lvl *l = NULL;
+  npc **npcs = NULL;
+  if ((l = malloc(sizeof *l)) == NULL
+      || (npcs = calloc(level_stats[stage][0], sizeof **npcs)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  char map[TOTAL_HEIGHT][TOTAL_WIDTH];
+  draw_map_and_free(map);
+  memcpy(l->map, map, sizeof(l->map)); 
+
+  for (int i = 0; i < level_stats[stage][0]; i++) {
+    npcs[i] = create_npc(find_free_tile(map), rand_range(level_stats[stage][1], level_stats[stage][2]) + 1, 0);
+    fill_matrix(map, npcs[i]->position->x, npcs[i]->position->y, 1, 1, npcs[i]->level);
+    log_msg(LOGFILE, "created npc %d: x(%d) y(%d) lvl(%d)", i, npcs[i]->position->x, npcs[i]->position->y, npcs[i]->level);
+  }
+  l->npcs = npcs;
+  return l;
 }
 
 gi * create_game_instance() {
   clear_log(LOGFILE);
   log_msg(LOGFILE, "game started");
-  gi *tmp;
-  lvl *l;
-  lvl *lvls[MAX_LEVELS];
-  npc *npcs[level_stats[0][0]];
+  gi *tmp = NULL;
+  lvl **lvls = NULL;
 
   if ((tmp = malloc(sizeof *tmp)) == NULL
-      //this is definitely wrong
-      || (l = malloc(sizeof *l + sizeof npcs)) == NULL) {
+    || (lvls = calloc(MAX_LEVELS, sizeof **lvls)) == NULL) {
     printw("malloc error occurred");
     (void)exit(EXIT_FAILURE);
   }
   for (int i = 0; i < MAX_LEVELS; i++) {
-    if ((lvls[i] = malloc(sizeof *l)) == NULL) {
-      printw("malloc error occurred");
-      (void)exit(EXIT_FAILURE);
-    }
+    lvls[i] = create_lvl(i);
   }
 
-  char map[TOTAL_HEIGHT][TOTAL_WIDTH];
-  draw_map_and_free(map);
-
-  player *p = create_player(find_free_tile(map));
-  fill_matrix(map, p->position->x, p->position->y, 1, 1, PLAYER);
+  player *p = create_player(find_free_tile(lvls[0]->map));
+  fill_matrix(lvls[0]->map, p->position->x, p->position->y, 1, 1, PLAYER);
   log_msg(LOGFILE, "created player: x(%d) y(%d)", p->position->x, p->position->y);
-
-  for (int i = 0; i < level_stats[0][0]; i++) {
-    npcs[i] = create_npc(find_free_tile(map), random() % (level_stats[0][2] + 1 - level_stats[0][1]) + level_stats[0][1], 0);
-    fill_matrix(map, npcs[i]->position->x, npcs[i]->position->y, 1, 1, npcs[i]->level);
-    log_msg(LOGFILE, "created npc %d: x(%d) y(%d) lvl(%d)", i, npcs[i]->position->x, npcs[i]->position->y, npcs[i]->level);
-    /*if ((npcs[i] = malloc(sizeof(npc))) == NULL) {
-      printw("malloc error occurred");
-      (void)exit(EXIT_FAILURE);
-      }*/
-  }
-
-  memcpy(l->map, map, sizeof(l->map)); 
-  //this is definitely wrong as well
-  memcpy(l->npcs, npcs, sizeof(npcs)); 
-
-  lvls[0] = l;
 
   tmp->p = p;
   tmp->cur_level = 0;
-  memcpy(tmp->levels, lvls, sizeof(tmp->levels)); 
+  tmp->levels = lvls; 
   return tmp;
 }
 

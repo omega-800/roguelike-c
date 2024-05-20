@@ -23,8 +23,6 @@ typedef struct room_list_node {
 typedef struct section_node {
   pos *position;
   pos *size;
-  pos *corridor_pos;
-  char corridor_direction;
   rnode *room;
   struct section_node *child2;
   struct section_node *child1;

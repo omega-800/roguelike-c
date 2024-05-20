@@ -17,6 +17,5 @@ void log_msg(const char *filename, const char *msg, ...) {
 void clear_log(const char *filename) {
   FILE *fptr;
   fptr = fopen(filename, "w");
-  fprintf(fptr, "");
   fclose(fptr);
 }
