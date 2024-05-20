@@ -20,8 +20,10 @@
 #define EMPTY 6
 #define PLAYER 7
 #define DEAD 8
+#define PREV 9
+#define NEXT 10
 
-#define HEALTH 9
+#define HEALTH 127
 
 typedef struct coordinates {
   int x;

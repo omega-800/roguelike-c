@@ -29,6 +29,23 @@ void print_stats(gi *game) {
   //  }
 }
 
+void move_lvl(gi * game, char newlvl){
+  if (game->cur_level + newlvl < 0 || game->cur_level + newlvl >= MAX_LEVELS) return;
+  clear();
+  game->levels[game->cur_level]->map[game->p->position->y][game->p->position->x] = EMPTY;
+  game->cur_level += newlvl;
+  lvl *curlvl = game->levels[game->cur_level];
+  print_matrix(curlvl->map); 
+  pos *spawn = newlvl > 0 ? curlvl->entrance : curlvl->exit;
+  pos *newpos = find_free_tile_from(curlvl->map, spawn->x, spawn->y, 1);
+  game->p->position->x = newpos->x;
+  game->p->position->y = newpos->y;
+  fill_matrix(curlvl->map, game->p->position->x, game->p->position->y, 1, 1, PLAYER);
+  refresh();
+  free(newpos);
+  log_msg(LOGFILE, "NEW LEVEL, moved player: x(%d) y(%d)", game->p->position->x, game->p->position->y);
+}
+
 char try_move(int x, int y, char **map, pos *pos, char type){
   if (map[pos->y + y][pos->x + x] != EMPTY) return 0;
   map[pos->y][pos->x] = EMPTY;
@@ -79,6 +96,14 @@ void move_if_free(int x, int y, gi *game) {
         print_char(enemy->position->x, enemy->position->y, DEAD);
       }
     }
+  } else if (curlvl->map[p_pos->y + y][p_pos->x + x] == 9) {
+    // previous / exit
+    move_lvl(game, -1);
+    curlvl = game->levels[game->cur_level];
+  } else if (curlvl->map[p_pos->y + y][p_pos->x + x] == 10) {
+    // next / entrance
+    move_lvl(game, 1);
+    curlvl = game->levels[game->cur_level];
   } else if (try_move(x, y, curlvl->map, p_pos, PLAYER)){
     if (game->p->idle_streak < PLAYER_IDLE_TIME) {
       game->p->idle_streak++;
@@ -132,6 +157,8 @@ void free_levels(lvl **lvls) {
       free_npc(lvls[i]->npcs[j]);
     }
     free(lvls[i]->npcs);
+    free(lvls[i]->entrance);
+    free(lvls[i]->exit);
     free(lvls[i]);
   }
   free(lvls);
@@ -143,30 +170,6 @@ void free_game(gi *game) {
   free(game);
 }
 
-void game_over(gi *game) {
-  clear();
-  printw("You lost!\nStart new game? (y/n)");
-  refresh();
-  if(getch() != 'y') exit(1);
-  free_game(game);
-}
-
-char ** init_map() {
-  char **map = NULL;
-  if ((map = calloc(TOTAL_HEIGHT, sizeof *map)) == NULL) {
-    printw("malloc error occurred");
-    (void)exit(EXIT_FAILURE);
-  }
-  for (int i = 0; i < TOTAL_HEIGHT; i++) {
-    if ((map[i] = calloc(TOTAL_WIDTH, sizeof **map)) == NULL) {
-      printw("malloc error occurred");
-      (void)exit(EXIT_FAILURE);
-    }
-  }
-  draw_map_and_free(map);
-  return map;
-}
-
 lvl * create_lvl(int stage) {
   lvl *l = NULL;
   npc **npcs = NULL;
@@ -175,8 +178,18 @@ lvl * create_lvl(int stage) {
     printw("malloc error occurred");
     (void)exit(EXIT_FAILURE);
   }
+  
+  snode *node_map = create_map_tree();
+  //actually rooms but i'm too lazy to refactor now
+  rlnode *rooms = create_corridors(node_map);
+  pos *entrance = rand_pos_in_room(rooms->cur);
+  pos *xt = get_exit(rooms);
 
-  l->map = init_map();
+  l->map = init_map(node_map, rooms, entrance, xt);
+  l->entrance = entrance;
+  l->exit = xt;
+  free_map_tree(node_map);
+  free_rlnodes(rooms);
 
   for (int i = 0; i < level_stats[stage][0]; i++) {
     npcs[i] = create_npc(find_free_tile(l->map), rand_range(level_stats[stage][1], level_stats[stage][2]) + 1, 0);
@@ -202,7 +215,7 @@ gi * create_game_instance() {
     lvls[i] = create_lvl(i);
   }
 
-  player *p = create_player(find_free_tile(lvls[0]->map));
+  player *p = create_player(find_free_tile_from(lvls[0]->map, lvls[0]->entrance->x, lvls[0]->entrance->y, 1));
   fill_matrix(lvls[0]->map, p->position->x, p->position->y, 1, 1, PLAYER);
   log_msg(LOGFILE, "created player: x(%d) y(%d)", p->position->x, p->position->y);
 

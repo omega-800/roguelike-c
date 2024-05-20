@@ -14,6 +14,8 @@
 typedef struct level {
   char **map;
   npc **npcs;
+  pos *entrance;
+  pos *exit;
 } lvl;
 
 typedef struct game_instance {
@@ -22,10 +24,10 @@ typedef struct game_instance {
   lvl **levels;
 } gi;
 
+void free_game(gi *game);
 void print_stats(gi *game);
 void move_if_free(int x, int y, gi *game);
 void handle_input(char in, gi *game);
-void game_over(gi *game);
 gi * create_game_instance();
 
 #endif

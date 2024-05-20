@@ -8,6 +8,17 @@ int rand_range(int min, int max) {
   return (random() % (max - min + 1)) + min - 1;
 }
 
+pos * rand_pos_in_room(rnode *room) {
+  pos *tmp = NULL;
+  if ((tmp = malloc(sizeof *tmp)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  } 
+  tmp->x = rand_range(room->position->x + 1, room->size->x + room->position->x - 1);
+  tmp->y = rand_range(room->position->y + 1, room->size->y + room->position->y - 1);
+  return tmp; 
+}
+
 void fill_matrix(char **map, int x, int y, int width, int height, char symbol) {
   for (int i = 0; i < height; i++) {
     for (int j = 0; j < width; j++) {
@@ -212,14 +223,14 @@ pos * find_free_tile(char **map) {
 
 void populate_matrix_corridors(char **map, rlnode *rooms) {
   if (!rooms->next) return;
-  int from_x = rand_range(rooms->cur->position->x + 1, rooms->cur->size->x + rooms->cur->position->x - 1);
-  int from_y = rand_range(rooms->cur->position->y + 1, rooms->cur->size->y + rooms->cur->position->y - 1);
-  int to_x = rand_range(rooms->next->cur->position->x + 1, rooms->next->cur->size->x + rooms->next->cur->position->x - 1);
-  int to_y = rand_range(rooms->next->cur->position->y + 1, rooms->next->cur->size->y + rooms->next->cur->position->y - 1);
-  char minus_x = from_x > to_x;
-  char minus_y = from_y > to_y;
-  fill_matrix(map, minus_x ? to_x : from_x, minus_y ? to_y : from_y, abs(from_x - to_x), 1, EMPTY);
-  fill_matrix(map, minus_x ? to_x : from_x, minus_y ? to_y : from_y, 2, abs(from_y - to_y), EMPTY);
+  pos * from = rand_pos_in_room(rooms->cur);
+  pos * to = rand_pos_in_room(rooms->next->cur);
+  char minus_x = from->x > to->x;
+  char minus_y = from->y > to->y;
+  fill_matrix(map, minus_x ? to->x : from->x, minus_y ? to->y : from->y, abs(from->x - to->x), 1, EMPTY);
+  fill_matrix(map, minus_x ? to->x : from->x, minus_y ? to->y : from->y, 2, abs(from->y - to->y), EMPTY);
+  free(from);
+  free(to);
   populate_matrix_corridors(map, rooms->next);  
 }
 
@@ -227,15 +238,34 @@ void populate_matrix_rooms(char **map, snode *head) {
   if (head->child1) populate_matrix_rooms(map, head->child1);
   if (head->child2) populate_matrix_rooms(map, head->child2);
   //???
-  if (head->room && head->room->position && head->room->position->x) fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
+  if (head->room) fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
 }
 
-void draw_map_and_free(char **map) {
-  snode *node_map = create_map_tree();
-  rlnode *corridors = create_corridors(node_map);
+pos * get_exit(rlnode *rooms) {
+  if (rooms->next) return get_exit(rooms->next);
+  return rand_pos_in_room(rooms->cur);
+}
+
+void populate_matrix_exits(char **map, pos *entrance, pos *xt) {
+  fill_matrix(map, entrance->x, entrance->y, 1, 1, PREV);
+  fill_matrix(map, xt->x, xt->y, 1, 1, NEXT);
+}
+
+char ** init_map(snode *node_map,rlnode *corridors,pos *entrance, pos *xt) {
+  char **map = NULL;
+  if ((map = calloc(TOTAL_HEIGHT, sizeof *map)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  for (int i = 0; i < TOTAL_HEIGHT; i++) {
+    if ((map[i] = calloc(TOTAL_WIDTH, sizeof **map)) == NULL) {
+      printw("malloc error occurred");
+      (void)exit(EXIT_FAILURE);
+    }
+  }
   fill_matrix(map, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, WALL);
   populate_matrix_rooms(map, node_map);
   populate_matrix_corridors(map, corridors);
-  free_map_tree(node_map);
-  free_rlnodes(corridors);
+  populate_matrix_exits(map, entrance, xt);
+  return map;
 }

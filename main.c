@@ -13,7 +13,12 @@ int main() {
   //move(p->position->y, p->position->x);
   while (in != 'x' && in != 'q') {
     if (game->p->health < 1) {
-      game_over(game); 
+      free_game(game);
+      if (!prompt("You lost!\nStart new game? (y/n)")) break; 
+      game = create_game_instance();
+      print_matrix(game->levels[game->cur_level]->map); 
+    }
+    if (in == 'r' && prompt("Start new game? (y/n)")) {
       game = create_game_instance();
       print_matrix(game->levels[game->cur_level]->map); 
     }

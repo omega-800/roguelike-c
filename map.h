@@ -42,6 +42,9 @@ pos * find_free_tile_from(char **map, int x, int y, int radius);
 pos * find_free_tile(char **map);
 void populate_matrix_rooms(char **map, snode *head);
 void populate_matrix_corridors(char **map, rlnode *rooms);
-void draw_map_and_free(char **map); 
+void populate_matrix_exits(char **map, pos *entrance, pos *xt);
+char ** init_map(snode *node_map,rlnode *corridors,pos *entrance, pos *xt);
+pos * get_exit(rlnode *rooms);
+pos * rand_pos_in_room(rnode *room);
 
 #endif
