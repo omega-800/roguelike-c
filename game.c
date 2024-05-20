@@ -54,8 +54,9 @@ void move_lvl(gi * game, char newlvl){
   game->p->position->y = newpos->y;
   log_msg(LOGFILE, "NEW LEVEL, moved player: x(%d) y(%d)", game->p->position->x, game->p->position->y);
   curlvl->map[newpos->y][newpos->x] = PLAYER;
-  print_matrix(curlvl->map); 
+  fill_matrix_around(curlvl->discovered, game->p->position->x, game->p->position->y,TOTAL_WIDTH, TOTAL_HEIGHT, 1, PLAYER_SIGHT);
   fill_matrix(curlvl->map, game->p->position->x, game->p->position->y, 1, 1, PLAYER);
+  print_matrix(curlvl->map, curlvl->discovered); 
   refresh();
   free(newpos);
 }
@@ -132,7 +133,9 @@ void move_if_free(int x, int y, gi *game) {
     }
     curlvl->map[p_pos->y + y][p_pos->x + x] = EMPTY;
     try_move(x, y, curlvl->map, p_pos, PLAYER);
+    fill_matrix_around(curlvl->discovered, p_pos->x, p_pos->y,TOTAL_WIDTH, TOTAL_HEIGHT, 1, PLAYER_SIGHT);
   } else if (try_move(x, y, curlvl->map, p_pos, PLAYER)){
+    fill_matrix_around(curlvl->discovered, p_pos->x, p_pos->y,TOTAL_WIDTH, TOTAL_HEIGHT, 1, PLAYER_SIGHT);
     if (game->p->idle_streak < player_stats[game->p->level][2]) {
       game->p->idle_streak++;
     } else {
@@ -181,6 +184,7 @@ void free_map(char **map) {
 void free_levels(lvl **lvls) {
   for (int i = 0; i < MAX_LEVELS; i++) {
     free_map(lvls[i]->map);
+    free_map(lvls[i]->discovered);
     for (int j = 0; j < level_stats[i][0]; j++) {
       free_npc(lvls[i]->npcs[j]);
     }
@@ -214,6 +218,7 @@ lvl * create_lvl(int stage) {
   pos *xt = get_exit(rooms);
 
   l->map = init_map(node_map, rooms, entrance, xt, level_stats[stage][3]);
+  l->discovered = init_discovered();
   l->entrance = entrance;
   l->exit = xt;
   free_map_tree(node_map);
@@ -245,6 +250,7 @@ gi * create_game_instance() {
 
   player *p = create_player(find_free_tile_from(lvls[0]->map, lvls[0]->entrance->x, lvls[0]->entrance->y, 1));
   fill_matrix(lvls[0]->map, p->position->x, p->position->y, 1, 1, PLAYER);
+  fill_matrix_around(lvls[0]->discovered, p->position->x, p->position->y,TOTAL_WIDTH, TOTAL_HEIGHT, 1, PLAYER_SIGHT);
   log_msg(LOGFILE, "created player: x(%d) y(%d)", p->position->x, p->position->y);
 
   tmp->p = p;

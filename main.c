@@ -9,19 +9,17 @@ int main() {
   char in = '0';
   initscr();
   create_colors();
-  print_matrix(game->levels[game->cur_level]->map); 
   //move(p->position->y, p->position->x);
   while (in != 'x' && in != 'q') {
     if (game->p->health < (int)1) {
       free_game(game);
       if (!prompt("You lost!\nStart new game? (y/n)")) break; 
       game = create_game_instance();
-      print_matrix(game->levels[game->cur_level]->map); 
     }
     if (in == 'r' && prompt("Start new game? (y/n)")) {
       game = create_game_instance();
-      print_matrix(game->levels[game->cur_level]->map); 
     }
+      print_matrix(game->levels[game->cur_level]->map, game->levels[game->cur_level]->discovered); 
     print_stats(game);
     refresh();
     in = getch();

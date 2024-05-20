@@ -27,6 +27,25 @@ void fill_matrix(char **map, int x, int y, int width, int height, char symbol) {
   }
 }
 
+int minmax(int min, int max, int value) {
+  if (value>max) return max;
+  if (value<min) return min;
+  return value;
+}
+
+void fill_matrix_around(char **map, int x, int y, int width, int height, char symbol, int radius) {
+  for (int i = 0; i < radius; i++) {
+    for (int j = 0; j < (radius * 2); j++) {
+      if(j + i < (radius * 2)){
+        map[minmax(0, height-1,i + y)][minmax(0,width-1, j + x)] = symbol;
+        map[minmax(0, height-1,y - i)][minmax(0,width-1, j + x)] = symbol;
+        map[minmax(0, height-1,y + i)][minmax(0,width-1, x - j)] = symbol;
+        map[minmax(0, height-1,y - i)][minmax(0,width-1, x - j)] = symbol;
+      }
+    }
+  }
+}
+
 snode * add_snode(snode *head, int x, int y, int w, int h) {
   snode *section = NULL;
   pos *section_pos = NULL;
@@ -256,6 +275,22 @@ void populate_matrix_potions(char **map, int potions) {
     fill_matrix(map, potion_pos->x, potion_pos->y, 1, 1, POTION);
     free(potion_pos);
   }
+}
+
+char ** init_discovered(){
+  char **map = NULL;
+  if ((map = calloc(TOTAL_HEIGHT, sizeof *map)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  for (int i = 0; i < TOTAL_HEIGHT; i++) {
+    if ((map[i] = calloc(TOTAL_WIDTH, sizeof **map)) == NULL) {
+      printw("malloc error occurred");
+      (void)exit(EXIT_FAILURE);
+    }
+  }
+  fill_matrix(map, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, 0);
+  return map;
 }
 
 char ** init_map(snode *node_map,rlnode *corridors,pos *entrance, pos *xt, int potions) {

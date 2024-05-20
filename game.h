@@ -14,6 +14,7 @@
 
 typedef struct level {
   char **map;
+  char **discovered;
   npc **npcs;
   pos *entrance;
   pos *exit;

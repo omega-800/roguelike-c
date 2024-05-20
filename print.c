@@ -12,7 +12,8 @@ char *characters[] = {
   "T", 
   "P", 
   "N", 
-  "+" 
+  "+",
+  "?" 
 };
 unsigned int effects[] = { 
   A_NORMAL, 
@@ -26,7 +27,8 @@ unsigned int effects[] = {
   A_NORMAL, 
   A_STANDOUT, 
   A_STANDOUT, 
-  A_BLINK 
+  A_BLINK,
+  A_DIM, 
 };
 
 char prompt(char * text) {
@@ -45,10 +47,10 @@ void print_char(int x, int y, char type) {
   //mvaddch(y, x, *characters[type - '0'] | A_BOLD | COLOR_PAIR(type));
 }
 
-void print_matrix(char **map) {
+void print_matrix(char **map, char **known) {
   for (int i = 0; i < TOTAL_HEIGHT; i++) {
     for (int j = 0; j < TOTAL_WIDTH; j++) {
-        print_char(j, i, map[i][j]);
+        print_char(j, i, known[i][j] ? map[i][j] : UNKNOWN);
         //attron(COLOR_PAIR(map[i][j]));
         //addstr(characters[map[i][j]]);
         //attroff(COLOR_PAIR(map[i][j]));
@@ -72,5 +74,6 @@ void create_colors() {
   init_pair(PREV, COLOR_YELLOW, COLOR_BLACK);
   init_pair(NEXT, COLOR_YELLOW, COLOR_BLACK);
   init_pair(POTION, COLOR_RED, COLOR_WHITE);
+  init_pair(UNKNOWN, COLOR_BLUE, COLOR_BLACK);
   noecho();
 }

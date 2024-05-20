@@ -10,6 +10,7 @@
 #define PLAYER_INIT_ATTACK 2
 #define PLAYER_IDLE_HEAL 1
 #define PLAYER_IDLE_TIME 16
+#define PLAYER_SIGHT 8
 
 extern const char enemies[4][3];
 extern const int player_stats[PLAYER_MAX_LEVEL][4];

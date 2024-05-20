@@ -30,6 +30,7 @@ typedef struct section_node {
 
 int rand_range(int min, int max);
 void fill_matrix(char **map, int x, int y, int width, int height, char symbol);
+void fill_matrix_around(char **map, int x, int y, int width, int height, char symbol, int radius);
 snode * add_snode(snode *head, int x, int y, int w, int h);
 void create_rnode_list(snode *head, rlnode *rooms);
 rlnode * create_corridors(snode *head);
@@ -44,6 +45,7 @@ void populate_matrix_rooms(char **map, snode *head);
 void populate_matrix_corridors(char **map, rlnode *rooms);
 void populate_matrix_exits(char **map, pos *entrance, pos *xt);
 char ** init_map(snode *node_map,rlnode *corridors,pos *entrance, pos *xt, int potions);
+char ** init_discovered();
 pos * get_exit(rlnode *rooms);
 pos * rand_pos_in_room(rnode *room);
 

@@ -23,6 +23,7 @@
 #define PREV 9
 #define NEXT 10
 #define POTION 11
+#define UNKNOWN 12
 
 #define HEALTH 127
 
