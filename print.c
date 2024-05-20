@@ -11,7 +11,8 @@ char *characters[] = {
   "@", 
   "T", 
   "P", 
-  "N" 
+  "N", 
+  "+" 
 };
 unsigned int effects[] = { 
   A_NORMAL, 
@@ -32,7 +33,11 @@ char prompt(char * text) {
   clear();
   printw(text);
   refresh();
-  return getch() == 'y';
+  char in = '0';
+  while (in != 'y' && in != 'n'){
+    in = getch();
+  }
+  return in == 'y';
 }
 
 void print_char(int x, int y, char type) {
@@ -60,11 +65,12 @@ void create_colors() {
   init_pair(ENEMY_3, COLOR_BLUE, COLOR_MAGENTA);
   init_pair(ENEMY_4, COLOR_MAGENTA, COLOR_BLUE);
   init_pair(EMPTY, COLOR_YELLOW, COLOR_BLACK);
-  init_pair(WALL, COLOR_BLACK, COLOR_WHITE);
+  init_pair(WALL, COLOR_BLACK, COLOR_BLUE);
   init_pair(PLAYER, COLOR_CYAN, COLOR_GREEN);
-  init_pair(HEALTH, COLOR_RED, COLOR_WHITE);
+  init_pair(HEALTH, COLOR_RED, COLOR_BLACK);
   init_pair(DEAD, COLOR_YELLOW, COLOR_BLACK);
   init_pair(PREV, COLOR_YELLOW, COLOR_BLACK);
   init_pair(NEXT, COLOR_YELLOW, COLOR_BLACK);
+  init_pair(POTION, COLOR_RED, COLOR_WHITE);
   noecho();
 }

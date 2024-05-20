@@ -1,24 +1,37 @@
 #include "game.h"
 
-// i=lvl, enemy_count, e_min_lvl, e_max_lvl
-const char level_stats[MAX_LEVELS][3] = {
-  { 8, 1, 2 },
-  { 12, 1, 3 },
-  { 16, 2, 4 },
-  { 32, 3, 4 },
+// i=lvl, enemy_count, e_min_lvl, e_max_lvl, potions
+const char level_stats[MAX_LEVELS][4] = {
+  { 10, 1, 2, 8 },
+  { 16, 1, 3, 8 },
+  { 24, 2, 4, 16 },
+  { 32, 3, 4, 1 },
 };
 
+int numPlaces (int n) {
+    if (n < 0) return numPlaces ((n == INT_MIN) ? INT_MAX: -n);
+    if (n < 10) return 1;
+    return 1 + numPlaces (n / 10);
+}
+
 void print_stats(gi *game) {
-  mvprintw(TOTAL_HEIGHT, 0,"Press x or q to exit, hjkl to navigate\n"); 
-  mvprintw(TOTAL_HEIGHT + 1, 0, "Health: "); 
-  for (int i = 0; i < PLAYER_MAX_HEALTH / 2; i++) {
-    mvaddch(TOTAL_HEIGHT + 1, 8 + i, (game->p->health - i * 2 == 1 ? '+' : game->p->health > i * 2 ? '#' : ' ') | A_BOLD | COLOR_PAIR(HEALTH));
+  mvprintw(TOTAL_HEIGHT,0,"\n\n\n\n\n\n\n\n\n\n");
+  mvprintw(TOTAL_HEIGHT, 0,"Press x or q to exit, hjkl to navigate, r to restart"); 
+  mvprintw(TOTAL_HEIGHT, TOTAL_WIDTH - 18 - numPlaces(game->cur_level+1) - numPlaces(MAX_LEVELS),"Dungeon Level: %d / %d", game->cur_level + 1, MAX_LEVELS); 
+  mvprintw(TOTAL_HEIGHT + 2, (TOTAL_WIDTH / 2) - 5, "Your stats");
+  mvprintw(TOTAL_HEIGHT + 3, 0, "Health: "); 
+  for (int i = 0; i < player_stats[game->p->level][1] / 2; i++) {
+    mvaddch(TOTAL_HEIGHT + 3, 8 + i, (game->p->health - i * 2 == 1 ? '+' : game->p->health > i * 2 ? '#' : ' ') | A_BOLD | COLOR_PAIR(HEALTH));
   }
-  mvprintw(TOTAL_HEIGHT + 1, 9 + (PLAYER_MAX_HEALTH / 2), "(%d / %d)", game->p->health, PLAYER_MAX_HEALTH); 
-  printw("\nLevel: %d / %d\n", game->cur_level + 1, MAX_LEVELS);
-  printw("Position: x(%d) y(%d)\n", game->p->position->x, game->p->position->y);
-  printw("Dimensions: x(%d) y(%d)\n", COLS, LINES);
-  printw("colors: %d\n", COLORS);
+  mvprintw(TOTAL_HEIGHT + 3, 9 + (player_stats[game->p->level][1] / 2), "(%d / %d)", game->p->health, player_stats[game->p->level][1]); 
+  mvprintw(TOTAL_HEIGHT + 3, TOTAL_WIDTH - 21 - numPlaces(player_stats[game->p->level][3]) - numPlaces(player_stats[game->p->level][2] - game->p->idle_streak), " Healing in %d steps (+%d)", player_stats[game->p->level][2] - game->p->idle_streak, player_stats[game->p->level][3]); 
+  mvprintw(TOTAL_HEIGHT + 4, 0, "Level: %d", game->p->level + 1);
+  mvprintw(TOTAL_HEIGHT + 4, TOTAL_WIDTH - 24 - numPlaces(10 - (game->p->kills % 10)), " Kills until next level: %d", (10 - (game->p->kills % 10)));
+  mvprintw(TOTAL_HEIGHT + 5, 0, "Kill count: %d", game->p->kills);
+  mvprintw(TOTAL_HEIGHT + 5, TOTAL_WIDTH - 8 - numPlaces(player_stats[game->p->level][0]), " Attack: %d", player_stats[game->p->level][0]);
+  //printw("Position: x(%d) y(%d)\n", game->p->position->x, game->p->position->y);
+  //printw("Dimensions: x(%d) y(%d)\n", COLS, LINES);
+  //printw("colors: %d\n", COLORS);
   //please help i am confusion
   //  npc *npcs[level_stats[0][0]];
   //  printw("npcs: %d\n", sizeof(npcs));
@@ -35,15 +48,16 @@ void move_lvl(gi * game, char newlvl){
   game->levels[game->cur_level]->map[game->p->position->y][game->p->position->x] = EMPTY;
   game->cur_level += newlvl;
   lvl *curlvl = game->levels[game->cur_level];
-  print_matrix(curlvl->map); 
   pos *spawn = newlvl > 0 ? curlvl->entrance : curlvl->exit;
   pos *newpos = find_free_tile_from(curlvl->map, spawn->x, spawn->y, 1);
   game->p->position->x = newpos->x;
   game->p->position->y = newpos->y;
+  log_msg(LOGFILE, "NEW LEVEL, moved player: x(%d) y(%d)", game->p->position->x, game->p->position->y);
+  curlvl->map[newpos->y][newpos->x] = PLAYER;
+  print_matrix(curlvl->map); 
   fill_matrix(curlvl->map, game->p->position->x, game->p->position->y, 1, 1, PLAYER);
   refresh();
   free(newpos);
-  log_msg(LOGFILE, "NEW LEVEL, moved player: x(%d) y(%d)", game->p->position->x, game->p->position->y);
 }
 
 char try_move(int x, int y, char **map, pos *pos, char type){
@@ -88,31 +102,45 @@ void move_if_free(int x, int y, gi *game) {
     if (enemy) {
       if (enemy->health > 0) {
         //log_msg(LOGFILE, "preattack player h(%d) npc h(%d)", game->p->health, enemy->health);
-        enemy->health -= game->p->attack;
+        enemy->health -= player_stats[game->p->level][0];
         game->p->idle_streak = 0;
+        if (enemy->health <= 0) {
+          game->p->kills++;
+          if (game->p->kills % 10 == 0 && game->p->level < PLAYER_MAX_LEVEL) game->p->level++;
+        }
         //log_msg(LOGFILE, "ATTACK! player h(%d) npc h(%d)", game->p->health, enemy->health);
       }
       if (enemy->health <= 0) {
+        curlvl->map[enemy->position->y][enemy->position->x] = DEAD;
         print_char(enemy->position->x, enemy->position->y, DEAD);
       }
     }
-  } else if (curlvl->map[p_pos->y + y][p_pos->x + x] == 9) {
+  } else if (curlvl->map[p_pos->y + y][p_pos->x + x] == PREV) {
     // previous / exit
     move_lvl(game, -1);
     curlvl = game->levels[game->cur_level];
-  } else if (curlvl->map[p_pos->y + y][p_pos->x + x] == 10) {
+  } else if (curlvl->map[p_pos->y + y][p_pos->x + x] == NEXT) {
     // next / entrance
     move_lvl(game, 1);
     curlvl = game->levels[game->cur_level];
+  } else if (curlvl->map[p_pos->y + y][p_pos->x + x] == POTION) {
+    int heal = (game->cur_level + 1) * 4;
+    if (game->p->health + heal <= player_stats[game->p->level][1]) {
+      game->p->health += heal;
+    } else {
+      game->p->health = player_stats[game->p->level][1];
+    }
+    curlvl->map[p_pos->y + y][p_pos->x + x] = EMPTY;
+    try_move(x, y, curlvl->map, p_pos, PLAYER);
   } else if (try_move(x, y, curlvl->map, p_pos, PLAYER)){
-    if (game->p->idle_streak < PLAYER_IDLE_TIME) {
+    if (game->p->idle_streak < player_stats[game->p->level][2]) {
       game->p->idle_streak++;
     } else {
       game->p->idle_streak = 0;
-      if (game->p->health + PLAYER_IDLE_HEAL <= PLAYER_MAX_HEALTH) {
-        game->p->health += PLAYER_IDLE_HEAL;
+      if (game->p->health + player_stats[game->p->level][3] <= player_stats[game->p->level][1]) {
+        game->p->health += player_stats[game->p->level][3];
       } else {
-        game->p->health = PLAYER_MAX_HEALTH;
+        game->p->health = player_stats[game->p->level][1];
       }
     }
     //log_msg(LOGFILE, "moved player: x(%d) y(%d)", p_pos->x, p_pos->y);
@@ -185,14 +213,14 @@ lvl * create_lvl(int stage) {
   pos *entrance = rand_pos_in_room(rooms->cur);
   pos *xt = get_exit(rooms);
 
-  l->map = init_map(node_map, rooms, entrance, xt);
+  l->map = init_map(node_map, rooms, entrance, xt, level_stats[stage][3]);
   l->entrance = entrance;
   l->exit = xt;
   free_map_tree(node_map);
   free_rlnodes(rooms);
 
   for (int i = 0; i < level_stats[stage][0]; i++) {
-    npcs[i] = create_npc(find_free_tile(l->map), rand_range(level_stats[stage][1], level_stats[stage][2]) + 1, 0);
+    npcs[i] = create_npc(find_free_tile(l->map), rand_range(level_stats[stage][1], level_stats[stage][2]), 0);
     fill_matrix(l->map, npcs[i]->position->x, npcs[i]->position->y, 1, 1, npcs[i]->level);
     log_msg(LOGFILE, "created npc %d: x(%d) y(%d) lvl(%d)", i, npcs[i]->position->x, npcs[i]->position->y, npcs[i]->level);
   }

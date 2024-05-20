@@ -5,7 +5,7 @@ int distance(pos *a, pos *b) {
 }
 
 int rand_range(int min, int max) {
-  return (random() % (max - min + 1)) + min - 1;
+  return (random() % (max - min + 1)) + min;
 }
 
 pos * rand_pos_in_room(rnode *room) {
@@ -237,7 +237,6 @@ void populate_matrix_corridors(char **map, rlnode *rooms) {
 void populate_matrix_rooms(char **map, snode *head) {
   if (head->child1) populate_matrix_rooms(map, head->child1);
   if (head->child2) populate_matrix_rooms(map, head->child2);
-  //???
   if (head->room) fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
 }
 
@@ -251,7 +250,15 @@ void populate_matrix_exits(char **map, pos *entrance, pos *xt) {
   fill_matrix(map, xt->x, xt->y, 1, 1, NEXT);
 }
 
-char ** init_map(snode *node_map,rlnode *corridors,pos *entrance, pos *xt) {
+void populate_matrix_potions(char **map, int potions) {
+  for (int i=0; i < potions; i++) {
+    pos * potion_pos = find_free_tile(map);
+    fill_matrix(map, potion_pos->x, potion_pos->y, 1, 1, POTION);
+    free(potion_pos);
+  }
+}
+
+char ** init_map(snode *node_map,rlnode *corridors,pos *entrance, pos *xt, int potions) {
   char **map = NULL;
   if ((map = calloc(TOTAL_HEIGHT, sizeof *map)) == NULL) {
     printw("malloc error occurred");
@@ -267,5 +274,6 @@ char ** init_map(snode *node_map,rlnode *corridors,pos *entrance, pos *xt) {
   populate_matrix_rooms(map, node_map);
   populate_matrix_corridors(map, corridors);
   populate_matrix_exits(map, entrance, xt);
+  populate_matrix_potions(map, potions);
   return map;
 }

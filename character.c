@@ -1,11 +1,22 @@
 #include "character.h"
 
+// attack, health, healtime, healcnt
+const int player_stats[PLAYER_MAX_LEVEL][4] = {
+  { 2, 32, 16, 1 },
+  { 4, 64, 16, 2 },
+  { 6, 69, 12, 2 },
+  { 8, 96, 8, 2 },
+  { 10, 128, 8, 4 },
+  { 12, 128, 12, 4 },
+  { 16, 256, 16, 4 },
+  { 69, 420, 69, 8 },
+};
 // i=lvl, health, atk, sight
 const char enemies[4][3] = {
-  { 4, 1, 4 },
+  { 4, 2, 16 },
   { 6, 2, 8 },
-  { 16, 1, 16 },
-  { 4, 8, 8 },
+  { 16, 1, 64 },
+  { 16, 4, 4 },
 };
 
 player * create_player(pos *p_position) {
@@ -16,9 +27,10 @@ player * create_player(pos *p_position) {
   }
   
   tmp->position = p_position;
-  tmp->health = PLAYER_MAX_HEALTH;
-  tmp->attack = PLAYER_INIT_ATTACK;
   tmp->idle_streak = 0;
+  tmp->level = 0;
+  tmp->kills = 0;
+  tmp->health = player_stats[0][1];
   //tmp->move_p = move_player;
   return tmp;
 }

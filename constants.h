@@ -22,6 +22,7 @@
 #define DEAD 8
 #define PREV 9
 #define NEXT 10
+#define POTION 11
 
 #define HEALTH 127
 

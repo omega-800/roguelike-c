@@ -5,12 +5,14 @@
 #include <ncurses.h>
 #include "constants.h"
 
-#define PLAYER_MAX_HEALTH 32
+#define PLAYER_MAX_HEALTH 64
+#define PLAYER_MAX_LEVEL 8
 #define PLAYER_INIT_ATTACK 2
 #define PLAYER_IDLE_HEAL 1
 #define PLAYER_IDLE_TIME 16
 
 extern const char enemies[4][3];
+extern const int player_stats[PLAYER_MAX_LEVEL][4];
 
 typedef struct character {
   pos *position;
@@ -22,9 +24,10 @@ typedef struct character {
 
 typedef struct player {
   pos *position;
-  char health;
-  char attack;
-  char idle_streak;
+  int health;
+  int idle_streak;
+  int level;
+  int kills;
   //void (*move_p)(struct player *);
 } player;
 
