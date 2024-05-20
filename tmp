@@ -1,0 +1,63 @@
+
+
+char ** init_map() {
+  char **map = NULL;
+  if ((map = calloc(TOTAL_WIDTH * TOTAL_HEIGHT, sizeof **map)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  for () {
+  if ((npcs = calloc(TOTAL_WIDTH * TOTAL_HEIGHT, sizeof **map)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  }
+  draw_map_and_free(map);
+  return map;
+}
+
+lvl * create_lvl(int stage) {
+  lvl *l = NULL;
+  npc **npcs = NULL;
+  if ((l = malloc(sizeof *l)) == NULL
+      || (npcs = calloc(level_stats[stage][0], sizeof **npcs)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+
+  l->map = init_map();
+
+  for (int i = 0; i < level_stats[stage][0]; i++) {
+    npcs[i] = create_npc(find_free_tile(map), rand_range(level_stats[stage][1], level_stats[stage][2]) + 1, 0);
+    fill_matrix(map, npcs[i]->position->x, npcs[i]->position->y, 1, 1, npcs[i]->level);
+    log_msg(LOGFILE, "created npc %d: x(%d) y(%d) lvl(%d)", i, npcs[i]->position->x, npcs[i]->position->y, npcs[i]->level);
+  }
+  l->npcs = npcs;
+  return l;
+}
+
+gi * create_game_instance() {
+  clear_log(LOGFILE);
+  log_msg(LOGFILE, "game started");
+  gi *tmp = NULL;
+  lvl **lvls = NULL;
+
+  if ((tmp = malloc(sizeof *tmp)) == NULL
+    || (lvls = calloc(MAX_LEVELS, sizeof **lvls)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  for (int i = 0; i < MAX_LEVELS; i++) {
+    lvls[i] = create_lvl(i);
+  }
+
+  player *p = create_player(find_free_tile(lvls[0]->map));
+  fill_matrix(lvls[0]->map, p->position->x, p->position->y, 1, 1, PLAYER);
+  log_msg(LOGFILE, "created player: x(%d) y(%d)", p->position->x, p->position->y);
+
+  tmp->p = p;
+  tmp->cur_level = 0;
+  tmp->levels = lvls; 
+  return tmp;
+}
+

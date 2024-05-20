@@ -8,7 +8,7 @@ int rand_range(int min, int max) {
   return (random() % (max - min + 1)) + min - 1;
 }
 
-void fill_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int width, int height, char symbol) {
+void fill_matrix(char **map, int x, int y, int width, int height, char symbol) {
   for (int i = 0; i < height; i++) {
     for (int j = 0; j < width; j++) {
       map[i + y][j + x] = symbol;
@@ -152,7 +152,7 @@ rlnode * create_corridors(snode *root) {
   return rooms;
 }
 
-pos * find_free_tile_from(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int startx, int starty, int radius) {
+pos * find_free_tile_from(char **map, int startx, int starty, int radius) {
   int x = startx;
   int y = starty;
   char direction = rand() % directions;
@@ -204,13 +204,13 @@ pos * find_free_tile_from(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int startx, int s
 }
 
 // spiral from random initial pos
-pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+pos * find_free_tile(char **map) {
   int x = random() % TOTAL_WIDTH;
   int y = random() % TOTAL_HEIGHT;
   return find_free_tile_from(map, x, y, TOTAL_WIDTH + TOTAL_HEIGHT);
 }
 
-void populate_matrix_corridors(char map[TOTAL_HEIGHT][TOTAL_WIDTH], rlnode *rooms) {
+void populate_matrix_corridors(char **map, rlnode *rooms) {
   if (!rooms->next) return;
   int from_x = rand_range(rooms->cur->position->x + 1, rooms->cur->size->x + rooms->cur->position->x - 1);
   int from_y = rand_range(rooms->cur->position->y + 1, rooms->cur->size->y + rooms->cur->position->y - 1);
@@ -223,14 +223,14 @@ void populate_matrix_corridors(char map[TOTAL_HEIGHT][TOTAL_WIDTH], rlnode *room
   populate_matrix_corridors(map, rooms->next);  
 }
 
-void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head) {
+void populate_matrix_rooms(char **map, snode *head) {
   if (head->child1) populate_matrix_rooms(map, head->child1);
   if (head->child2) populate_matrix_rooms(map, head->child2);
   //???
   if (head->room && head->room->position && head->room->position->x) fill_matrix(map, head->room->position->x, head->room->position->y, head->room->size->x, head->room->size->y, EMPTY);
 }
 
-void draw_map_and_free(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+void draw_map_and_free(char **map) {
   snode *node_map = create_map_tree();
   rlnode *corridors = create_corridors(node_map);
   fill_matrix(map, 0, 0, TOTAL_WIDTH, TOTAL_HEIGHT, WALL);

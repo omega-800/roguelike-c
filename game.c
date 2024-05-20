@@ -29,7 +29,7 @@ void print_stats(gi *game) {
   //  }
 }
 
-char try_move(int x, int y, char map[TOTAL_HEIGHT][TOTAL_WIDTH], pos *pos, char type){
+char try_move(int x, int y, char **map, pos *pos, char type){
   if (map[pos->y + y][pos->x + x] != EMPTY) return 0;
   map[pos->y][pos->x] = EMPTY;
   print_char(pos->x, pos->y, EMPTY);
@@ -118,9 +118,28 @@ void handle_input(char in, gi *game) {
   }
 }
 
+void free_map(char **map) {
+  for (int i = 0; i < TOTAL_HEIGHT; i++) {
+    free(map[i]);
+  }
+  free(map);
+}
+
+void free_levels(lvl **lvls) {
+  for (int i = 0; i < MAX_LEVELS; i++) {
+    free_map(lvls[i]->map);
+    for (int j = 0; j < level_stats[i][0]; j++) {
+      free_npc(lvls[i]->npcs[j]);
+    }
+    free(lvls[i]->npcs);
+    free(lvls[i]);
+  }
+  free(lvls);
+}
+
 void free_game(gi *game) {
-  // TODO: also free other stuff like npc's
   free_player(game->p);
+  free_levels(game->levels);
   free(game);
 }
 
@@ -132,6 +151,22 @@ void game_over(gi *game) {
   free_game(game);
 }
 
+char ** init_map() {
+  char **map = NULL;
+  if ((map = calloc(TOTAL_HEIGHT, sizeof *map)) == NULL) {
+    printw("malloc error occurred");
+    (void)exit(EXIT_FAILURE);
+  }
+  for (int i = 0; i < TOTAL_HEIGHT; i++) {
+    if ((map[i] = calloc(TOTAL_WIDTH, sizeof **map)) == NULL) {
+      printw("malloc error occurred");
+      (void)exit(EXIT_FAILURE);
+    }
+  }
+  draw_map_and_free(map);
+  return map;
+}
+
 lvl * create_lvl(int stage) {
   lvl *l = NULL;
   npc **npcs = NULL;
@@ -140,13 +175,12 @@ lvl * create_lvl(int stage) {
     printw("malloc error occurred");
     (void)exit(EXIT_FAILURE);
   }
-  char map[TOTAL_HEIGHT][TOTAL_WIDTH];
-  draw_map_and_free(map);
-  memcpy(l->map, map, sizeof(l->map)); 
+
+  l->map = init_map();
 
   for (int i = 0; i < level_stats[stage][0]; i++) {
-    npcs[i] = create_npc(find_free_tile(map), rand_range(level_stats[stage][1], level_stats[stage][2]) + 1, 0);
-    fill_matrix(map, npcs[i]->position->x, npcs[i]->position->y, 1, 1, npcs[i]->level);
+    npcs[i] = create_npc(find_free_tile(l->map), rand_range(level_stats[stage][1], level_stats[stage][2]) + 1, 0);
+    fill_matrix(l->map, npcs[i]->position->x, npcs[i]->position->y, 1, 1, npcs[i]->level);
     log_msg(LOGFILE, "created npc %d: x(%d) y(%d) lvl(%d)", i, npcs[i]->position->x, npcs[i]->position->y, npcs[i]->level);
   }
   l->npcs = npcs;

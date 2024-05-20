@@ -15,12 +15,12 @@ int main() {
     if (game->p->health < 1) {
       game_over(game); 
       game = create_game_instance();
-    } else {
-      print_stats(game);
-      refresh();
-      in = getch();
-      handle_input(in, game);
+      print_matrix(game->levels[game->cur_level]->map); 
     }
+    print_stats(game);
+    refresh();
+    in = getch();
+    handle_input(in, game);
   }
   endwin();
   return 0;

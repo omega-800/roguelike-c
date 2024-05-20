@@ -12,7 +12,7 @@
 #define MAX_LEVELS 4
 
 typedef struct level {
-  char map[TOTAL_HEIGHT][TOTAL_WIDTH];
+  char **map;
   npc **npcs;
 } lvl;
 

@@ -7,7 +7,7 @@ void print_char(int x, int y, char type) {
   //mvaddch(y, x, *characters[type - '0'] | A_BOLD | COLOR_PAIR(type));
 }
 
-void print_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH]) {
+void print_matrix(char **map) {
   for (int i = 0; i < TOTAL_HEIGHT; i++) {
     for (int j = 0; j < TOTAL_WIDTH; j++) {
         print_char(j, i, map[i][j]);

@@ -5,7 +5,7 @@
 #include "constants.h"
 
 void print_char(int x, int y, char type);
-void print_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH]);
+void print_matrix(char **map);
 void create_colors();
 
 #endif

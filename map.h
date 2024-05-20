@@ -29,7 +29,7 @@ typedef struct section_node {
 } snode;
 
 int rand_range(int min, int max);
-void fill_matrix(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int width, int height, char symbol);
+void fill_matrix(char **map, int x, int y, int width, int height, char symbol);
 snode * add_snode(snode *head, int x, int y, int w, int h);
 void create_rnode_list(snode *head, rlnode *rooms);
 rlnode * create_corridors(snode *head);
@@ -38,10 +38,10 @@ void free_map_tree(snode *head);
 void free_rlnodes(rlnode *rooms);
 snode * create_map_tree();
 int distance(pos *a, pos *b);
-pos * find_free_tile_from(char map[TOTAL_HEIGHT][TOTAL_WIDTH], int x, int y, int radius);
-pos * find_free_tile(char map[TOTAL_HEIGHT][TOTAL_WIDTH]);
-void populate_matrix_rooms(char map[TOTAL_HEIGHT][TOTAL_WIDTH], snode *head);
-void populate_matrix_corridors(char map[TOTAL_HEIGHT][TOTAL_WIDTH], rlnode *rooms);
-void draw_map_and_free(char map[TOTAL_HEIGHT][TOTAL_WIDTH]); 
+pos * find_free_tile_from(char **map, int x, int y, int radius);
+pos * find_free_tile(char **map);
+void populate_matrix_rooms(char **map, snode *head);
+void populate_matrix_corridors(char **map, rlnode *rooms);
+void draw_map_and_free(char **map); 
 
 #endif
