@@ -1,5 +1,5 @@
 all:
-	gcc -Werror -g main.c log.c game.c map.c print.c character.c -o main -lncursesw
+	gcc main.c log.c game.c map.c print.c character.c -o main -lncursesw
 debug: 
 	valgrind --leak-check=yes --log-file="debug.log" ./main 
 wtf:
